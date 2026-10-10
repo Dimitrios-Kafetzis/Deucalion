@@ -44,7 +44,7 @@ def _volumes(node: dict, out: list[Volume], parent_encrypted: bool = False) -> N
         _volumes(child, out, encrypted)
 
 
-def list_drives() -> list[Drive]:
+def list_drives(include_loops: bool = False) -> list[Drive]:
     res = run(["lsblk", "-J", "-b", "-o",
                "NAME,PATH,SIZE,TYPE,TRAN,RM,HOTPLUG,FSTYPE,LABEL,MOUNTPOINTS,MODEL"])
     if res.returncode != 0:
@@ -52,7 +52,7 @@ def list_drives() -> list[Drive]:
     system = backing_disks("/") | backing_disks(Path.home())
     drives = []
     for d in json.loads(res.stdout).get("blockdevices", []):
-        if d.get("type") != "disk":
+        if d.get("type") != "disk" and not (include_loops and d.get("type") == "loop"):
             continue
         vols: list[Volume] = []
         _volumes(d, vols)

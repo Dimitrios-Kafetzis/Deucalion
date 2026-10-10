@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import argparse
+import getpass
 import json
 import os
 import shutil
@@ -16,12 +17,13 @@ from . import __version__
 from .backup import BackupJob, Plan, Progress
 from .config import DEFAULT_HOME_EXCLUDES, Config
 from . import rebuild
+from . import drivesetup
 from .drives import list_drives
 from .privileged import Privileged
 from .logs import close_run_log, open_run_log
 from .restore import Restorer
 from .target import Target
-from .util import DeucalionError, fs_type, human_duration, human_size, is_encrypted
+from .util import DeucalionError, fs_type, human_duration, human_size, is_encrypted, run
 from .verify import verify
 
 # --------------------------------------------------------------------------------------------
@@ -129,6 +131,49 @@ def _print_list(title: str, items: list[str], limit: int) -> None:
 
 
 # --------------------------------------------------------------------------------------------
+# Finding (and if needed unlocking) the backup drive
+
+
+def _ask_password(prompt: str, confirm_it: bool = False) -> str:
+    if os.environ.get("DEUCALION_PASSWORD_STDIN"):
+        return sys.stdin.readline().rstrip("\n")
+    if not sys.stdin.isatty():
+        raise DeucalionError("A password is needed but there is no terminal to ask for it.")
+    while True:
+        pw = getpass.getpass(prompt)
+        if not confirm_it:
+            return pw
+        if len(pw) < 8:
+            print(red("  Use at least 8 characters (a few words make a strong, memorable password)."))
+            continue
+        if len(pw) < 12:
+            print(yellow("  Tip: 12 or more characters is much safer."))
+        if getpass.getpass("  Type it again: ") == pw:
+            return pw
+        print(red("  The two passwords are different. Try again."))
+
+
+def find_target(cfg: Config, wanted: str | None) -> Target:
+    """Target.find, but offers to unlock an encrypted backup drive first."""
+    try:
+        return Target.find(cfg, wanted)
+    except DeucalionError:
+        tid = Target.select(cfg, wanted)
+        access = cfg["targets"][tid].get("access") or {}
+        if access.get("method", "none") == "none":
+            raise
+    name = cfg["targets"][tid]["name"]
+    ds = drivesetup.DriveSetup(cfg, out=lambda s: print(dim(f"  {s}")))
+    try:
+        ds.locate(access)  # raises if the drive is not plugged in
+        print(f"The backup drive '{name}' is locked.")
+        ds.open(access, _ask_password("  Backup password: "))
+    finally:
+        ds.close()
+    return Target.find(cfg, wanted)
+
+
+# --------------------------------------------------------------------------------------------
 # Commands
 
 
@@ -227,7 +272,7 @@ def _only_from_args(cfg: Config, args) -> list[str]:
 
 
 def cmd_backup(cfg: Config, args) -> int:
-    target = Target.find(cfg, args.target)
+    target = find_target(cfg, args.target)
     printer = ProgressPrinter()
     with target.lock(), GracefulCancel() as cancel:
         log, log_paths = open_run_log(target, "backup" if not args.dry_run else "dry-run")
@@ -291,14 +336,26 @@ def cmd_backup(cfg: Config, args) -> int:
             print(green(msg) if result.status == "completed" else yellow(msg + " Some warnings above."))
             if log_paths:
                 print(dim(f"Log: {log_paths[0]}"))
+            _refresh_tool_copy(cfg, target)
             return 0
         finally:
             job.close()
             close_run_log(log)
 
 
+def _refresh_tool_copy(cfg: Config, target: Target) -> None:
+    """Keep the copy of Deucalion on the drive's unencrypted part up to date."""
+    try:
+        root = drivesetup.plain_root_of(cfg, target)
+        if root is not None and os.access(root, os.W_OK):
+            access = cfg["targets"].get(target.id, {}).get("access", {"method": "none"})
+            drivesetup.install_tool_copy(root, target, access)
+    except (OSError, DeucalionError) as e:
+        print(dim(f"(Could not update the copy of Deucalion on the drive: {e})"))
+
+
 def cmd_status(cfg: Config, args) -> int:
-    target = Target.find(cfg, args.target)
+    target = find_target(cfg, args.target)
     s = target.read_summary()
     m = target.manifest()
     try:
@@ -330,7 +387,7 @@ def cmd_status(cfg: Config, args) -> int:
 
 
 def cmd_ls(cfg: Config, args) -> int:
-    target = Target.find(cfg, args.target)
+    target = find_target(cfg, args.target)
     m = target.manifest()
     try:
         r = Restorer(cfg, target, m)
@@ -357,7 +414,7 @@ def cmd_ls(cfg: Config, args) -> int:
 
 
 def cmd_restore(cfg: Config, args) -> int:
-    target = Target.find(cfg, args.target)
+    target = find_target(cfg, args.target)
     printer = ProgressPrinter()
     with target.lock(), GracefulCancel() as cancel:
         m = target.manifest()
@@ -456,7 +513,7 @@ def _ask_step(step: "rebuild.Step", plan: "rebuild.StepPlan") -> str:
 
 
 def cmd_rebuild(cfg: Config, args) -> int:
-    target = Target.find(cfg, args.target)
+    target = find_target(cfg, args.target)
     interactive = sys.stdin.isatty() and not args.yes
     if not interactive and not args.yes and not args.dry_run:
         raise DeucalionError("rebuild needs a terminal to ask you questions (or use --dry-run / --yes).")
@@ -526,7 +583,7 @@ def cmd_rebuild(cfg: Config, args) -> int:
 
 
 def cmd_verify(cfg: Config, args) -> int:
-    target = Target.find(cfg, args.target)
+    target = find_target(cfg, args.target)
     printer = ProgressPrinter()
     with target.lock(), GracefulCancel() as cancel:
         m = target.manifest()
@@ -551,7 +608,7 @@ def cmd_verify(cfg: Config, args) -> int:
 
 
 def cmd_removed(cfg: Config, args) -> int:
-    target = Target.find(cfg, args.target)
+    target = find_target(cfg, args.target)
     batches = target.removed_batches()
     if args.action == "list" or args.action is None:
         if not batches:
@@ -666,6 +723,212 @@ def cmd_config(cfg: Config, args) -> int:
 # --------------------------------------------------------------------------------------------
 
 
+def _choose(title: str, options: list[tuple[str, str]], default: int = 1) -> str:
+    """Numbered menu; returns the key of the chosen option."""
+    print(bold(title))
+    for n, (_, text) in enumerate(options, 1):
+        print(f"  {n}) {text}")
+    while True:
+        try:
+            ans = input(f"  Choose [1-{len(options)}] (default {default}): ").strip()
+        except EOFError:
+            raise DeucalionError("Cancelled.") from None
+        if not ans:
+            return options[default - 1][0]
+        if ans.isdigit() and 1 <= int(ans) <= len(options):
+            return options[int(ans) - 1][0]
+
+
+def _ask_size_gb(question: str, default_gb: int, max_gb: int) -> int:
+    while True:
+        try:
+            ans = input(f"  {question} [default {default_gb} GB, max {max_gb} GB]: ").strip()
+        except EOFError:
+            raise DeucalionError("Cancelled.") from None
+        gb = default_gb if not ans else int(ans) if ans.isdigit() else -1
+        if 1 <= gb <= max_gb:
+            return gb * 1024 ** 3
+        print(red(f"  Enter a number between 1 and {max_gb}."))
+
+
+def cmd_setup_drive(cfg: Config, args) -> int:
+    interactive = sys.stdin.isatty() and not os.environ.get("DEUCALION_PASSWORD_STDIN")
+    drives = [d for d in list_drives(include_loops=args.allow_internal) if not d.system and (d.external or args.allow_internal)]
+    if args.device:
+        matches = [d for d in drives if d.path == args.device]
+        if not matches:
+            raise DeucalionError(f"{args.device} is not an external drive (your system disk is never offered).")
+        drive = matches[0]
+    else:
+        if not drives:
+            raise DeucalionError("No external drive found. Plug one in and try again.")
+        if not interactive:
+            raise DeucalionError("Give the drive, e.g. deucalion setup-drive /dev/sdb")
+        key = _choose("Which drive?", [(d.path, f"{d.path}  {d.model or 'Drive'}  {human_size(d.size)}")
+                                      for d in drives])
+        drive = next(d for d in drives if d.path == key)
+    print(bold(f"\n{drive.path}  {drive.model or 'Drive'}  {human_size(drive.size)}"))
+    mounted = [v for v in drive.volumes if v.mountpoints and not v.encrypted]
+    for v in drive.volumes:
+        used = ""
+        if v.mountpoints:
+            du = shutil.disk_usage(v.mountpoints[0])
+            used = f", {human_size(du.used)} used"
+        print(f"  {v.path}  {v.fstype or 'unknown'}  {human_size(v.size)}{used}"
+              + (f"  “{v.label}”" if v.label else "") + (f"  at {', '.join(v.mountpoints)}" if v.mountpoints else ""))
+    if not drive.volumes:
+        print("  (empty)")
+
+    layout = args.layout
+    if not layout:
+        if not interactive:
+            raise DeucalionError("Give --layout.")
+        opts = [(k, v) for k, v in drivesetup.LAYOUTS.items() if k in drivesetup.ERASING or mounted]
+        layout = _choose("\nHow should the backup be stored?", opts)
+    method = args.method or ""
+    if layout.startswith("encrypt") and not method:
+        if not interactive:
+            raise DeucalionError("Give --method veracrypt or --method luks.")
+        vc = "" if drivesetup.veracrypt_binary() else " (install VeraCrypt first)"
+        method = _choose("\nWhich encryption?", [
+            ("veracrypt", f"VeraCrypt: open it on Linux, macOS and Windows (with VeraCrypt){vc}"),
+            ("luks", "LUKS: built into Ubuntu, no extra software, Linux only")])
+    folder = ""
+    if layout in ("encrypt-folder", "as-is"):
+        if not mounted:
+            raise DeucalionError("This drive has no usable filesystem; choose a layout that formats it.")
+        folder = mounted[0].mountpoints[0] if len(mounted) == 1 or not interactive else _choose(
+            "\nWhich part of the drive?", [(v.mountpoints[0], f"{v.mountpoints[0]} ({v.fstype})") for v in mounted])
+    size = int(args.size * 1024 ** 3) if args.size else 0
+    if layout == "encrypt-part" and not size:
+        max_gb = max(int(drive.size / 1024 ** 3) - 1, 1)
+        size = _ask_size_gb("Size of the encrypted part for backups?", int(max_gb * 0.8), max_gb) if interactive \
+            else int(drive.size * 0.8)
+    if layout == "encrypt-folder" and not size:
+        max_gb = max(int(shutil.disk_usage(folder).free * 0.95 / 1024 ** 3), 1)
+        size = _ask_size_gb("Size of the encrypted folder? (it cannot grow later)", int(max_gb * 0.8), max_gb) \
+            if interactive else int(max_gb * 0.8) * 1024 ** 3
+    name = args.name or (input(f"  A name for this backup drive [Deucalion]: ").strip() if interactive else "") or "Deucalion"
+    req = drivesetup.SetupRequest(layout, device=drive.path, folder=folder, method=method, name=name, size=size,
+                                  allow_internal=args.allow_internal)
+
+    missing = drivesetup.missing_requirements(req)
+    if any(code == "exfatprogs" for code, _ in missing):
+        print(yellow("\nThe 'exfatprogs' package is needed to create exFAT filesystems."))
+        if confirm("  Install it now? (asks for your administrator password)", args.yes):
+            with Privileged() as priv:
+                if priv.call("apt_install", packages=["exfatprogs"], on_progress=lambda l: print(dim(f"    {l}"))).get("code"):
+                    raise DeucalionError("exfatprogs could not be installed.")
+    for code, msg in drivesetup.missing_requirements(req):
+        if code not in ("password",):
+            raise DeucalionError(msg)
+
+    print(bold("\nSummary"))
+    print(f"  Drive:  {drive.path}  {drive.model}  {human_size(drive.size)}")
+    print(f"  Layout: {drivesetup.LAYOUTS[layout]}" + (f" ({method})" if method else ""))
+    if size:
+        print(f"  Encrypted size: {human_size(size)}")
+    if layout in drivesetup.ERASING:
+        print(red(f"  EVERYTHING on {drive.path} will be erased."))
+        if args.yes_erase != os.path.basename(drive.path):
+            if not interactive:
+                raise DeucalionError(f"To erase the drive non-interactively, pass --yes-erase {os.path.basename(drive.path)}")
+            typed = input(f"  To confirm, type the drive name ({os.path.basename(drive.path)}): ").strip()
+            if typed != os.path.basename(drive.path):
+                print("Nothing was changed.")
+                return 1
+    elif not confirm("  Continue?", args.yes):
+        print("Nothing was changed.")
+        return 1
+    if layout.startswith("encrypt"):
+        print("\nChoose the password for the backup. It cannot be recovered if you forget it: write it down "
+              "and keep it somewhere safe.")
+        req.passphrase = _ask_password("  Backup password: ", confirm_it=True)
+    ds = drivesetup.DriveSetup(cfg, out=lambda line: print(f"  {line}"))
+    try:
+        target = ds.run(req)
+    finally:
+        ds.close()
+    print(green(f"\nDone. Back up with: deucalion backup") + (f"  (drive '{target.name}')" if target else ""))
+    return 0
+
+
+def cmd_open(cfg: Config, args) -> int:
+    ds = drivesetup.DriveSetup(cfg, out=lambda s: print(dim(f"  {s}")))
+    try:
+        if args.source:
+            src = os.path.abspath(args.source)
+            if src.startswith("/dev/"):
+                fstype = fs_type_of_device(src)
+                method = "luks" if fstype == "crypto_LUKS" else "veracrypt"
+                access = {"method": method, "kind": "partition", "source": src, "mount_name": "Deucalion"}
+            else:
+                method = "luks" if src.endswith(".luks") else "veracrypt"
+                access = {"method": method, "kind": "file", "source": src, "file": os.path.basename(src),
+                          "plain_path": os.path.dirname(src), "mount_name": "Deucalion"}
+        else:
+            access = None
+            try:
+                tid = Target.select(cfg, args.target)
+                access = cfg["targets"][tid].get("access")
+            except DeucalionError:
+                pass
+            if not access or access.get("method", "none") == "none":
+                found = drivesetup.discover()
+                if not found:
+                    raise DeucalionError("No encrypted Deucalion backup found. Plug in the drive, or give the "
+                                         "encrypted partition or file: deucalion open /dev/sdb2")
+                root, access = found[0]
+                if access.get("kind") == "file":
+                    access = dict(access, plain_path=str(root))
+        mp = ds.open(access, _ask_password("Backup password: "))
+    finally:
+        ds.close()
+    root = drivesetup.target_root_for(mp)
+    if root is None:
+        print(yellow(f"Unlocked at {mp}, but there is no Deucalion backup in it."))
+        return 1
+    target = Target(root)
+    entry = cfg.get("targets", {}).get(target.id)
+    if entry is None:
+        target.register(cfg)
+        print(f"Registered backup drive '{target.name}' on this machine.")
+    stored = {k: v for k, v in access.items() if k != "source"}
+    if access.get("kind") == "partition" and "partuuid" not in stored and access.get("source"):
+        stored["partuuid"] = run(["lsblk", "-no", "PARTUUID", access["source"]]).stdout.strip()
+    cfg["targets"][target.id]["access"] = stored
+    cfg["targets"][target.id]["path"] = str(root)
+    cfg.save()
+    print(green(f"Backup drive '{target.name}' is open: {root}"))
+    return 0
+
+
+def fs_type_of_device(dev: str) -> str:
+    return run(["blkid", "-s", "TYPE", "-o", "value", dev]).stdout.strip()
+
+
+def cmd_close(cfg: Config, args) -> int:
+    tid = Target.select(cfg, args.target)
+    entry = cfg["targets"][tid]
+    access = entry.get("access") or {"method": "none"}
+    ds = drivesetup.DriveSetup(cfg, out=lambda s: print(dim(f"  {s}")))
+    try:
+        if access.get("method", "none") == "none":
+            root = Path(entry["path"])
+            mp = run(["findmnt", "-rno", "TARGET", "--target", str(root)]).stdout.strip()
+            if not mp or not mp.startswith(("/media/", "/run/media/", "/mnt/")):
+                print("The backup drive is not mounted.")
+                return 0
+            src = run(["findmnt", "-rno", "SOURCE", mp]).stdout.strip()
+            ds.u.unmount(ds.u.resolve(src))
+        else:
+            ds.close_access(access)
+    finally:
+        ds.close()
+    print(green(f"Backup drive '{entry['name']}' is closed. You can unplug it."))
+    return 0
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="deucalion",
@@ -690,6 +953,23 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--allow-internal", action="store_true", help=argparse.SUPPRESS)
 
     add("targets", cmd_targets, "list registered backup drives")
+
+    sp = add("setup-drive", cmd_setup_drive, "prepare a drive for backups (format, encrypt)")
+    sp.add_argument("device", nargs="?", help="the drive, e.g. /dev/sdb (asked if not given)")
+    sp.add_argument("--layout", choices=list(drivesetup.LAYOUTS))
+    sp.add_argument("--method", choices=["veracrypt", "luks"], help="encryption method")
+    sp.add_argument("--size", type=float, metavar="GB", help="size of the encrypted part or folder")
+    sp.add_argument("--name", help="a name for the backup drive")
+    sp.add_argument("--yes-erase", metavar="DRIVE", default="", help="confirm erasing, e.g. --yes-erase sdb")
+    sp.add_argument("-y", "--yes", action="store_true", help="don't ask for other confirmations")
+    sp.add_argument("--allow-internal", action="store_true", help=argparse.SUPPRESS)
+
+    sp = add("open", cmd_open, "unlock an encrypted backup drive")
+    sp.add_argument("source", nargs="?", help="encrypted partition or file (only needed the first time)")
+    target_opt(sp)
+
+    sp = add("close", cmd_close, "lock/unmount the backup drive so it can be unplugged")
+    target_opt(sp)
 
     sp = add("backup", cmd_backup, "back up everything, or only some folders")
     sp.add_argument("--only", nargs="+", metavar="PATH", help="back up only these folders/files")

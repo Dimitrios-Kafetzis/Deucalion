@@ -91,6 +91,24 @@ class Target:
                 if _drive_info(cand):
                     yield cand
 
+    @staticmethod
+    def select(cfg: Config, wanted: str | None = None) -> str:
+        """The id of the registered target called `wanted` (or the default one)."""
+        targets = cfg.get("targets", {})
+        if not targets:
+            raise DeucalionError("No backup drive registered yet. Run: deucalion setup-drive "
+                                 "(or deucalion register <drive folder>)")
+        if wanted:
+            matches = [tid for tid, t in targets.items() if wanted in (tid, t.get("name"))]
+            if not matches:
+                raise DeucalionError(f"No registered backup drive called '{wanted}'.")
+            return matches[0]
+        if cfg.get("default_target") in targets:
+            return cfg["default_target"]
+        if len(targets) == 1:
+            return next(iter(targets))
+        raise DeucalionError("Several backup drives are registered; choose one with --target NAME.")
+
     @classmethod
     def find(cls, cfg: Config, wanted: str | None = None) -> "Target":
         """Locate a registered target by name or id (or the default one)."""

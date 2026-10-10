@@ -11,14 +11,16 @@ Ubuntu LTS or on a new machine, even with a different username.
   in a manifest on the drive and put back when you restore.
 - **Safe by default.** Every restore shows a preview first, and anything it would overwrite
   is kept in `~/Deucalion-before-restore/`.
-
 - **Rebuild a machine.** A full backup also saves a *system recipe* (packages, repositories,
   snaps, desktop settings, services, groups, changed `/etc` files, Wi-Fi/VPN connections).
   `deucalion rebuild` replays it on a new machine or a newer Ubuntu, step by step, with a
   preview at every step.
 
-> **Status:** milestones 1–2 of 5 done (backup, restore, system recipe and rebuild, from the
-> command line). Drive setup/encryption and the GNOME app are next. See [docs/PLAN.md](docs/PLAN.md).
+- **Optional encryption.** Encrypt the whole drive, an encrypted part of it, or an encrypted
+  folder on it: VeraCrypt (opens on Linux, macOS and Windows) or LUKS (Linux only).
+
+> **Status:** milestones 1–3 of 5 done (backup, restore, rebuild, drive setup and encryption, from
+> the command line). The GNOME app is next. See [docs/PLAN.md](docs/PLAN.md).
 
 ## Requirements
 
@@ -28,9 +30,10 @@ Ubuntu ships with.
 ## Quick start
 
 ```bash
-# from this folder (later: from the copy on your backup drive)
+# from this folder (or from the Deucalion-Tool folder on your backup drive)
 bin/deucalion drives                               # see your connected drives
-bin/deucalion register /media/$USER/MyDrive        # use this drive for backups
+bin/deucalion setup-drive                          # prepare a drive: format and/or encrypt it
+#   …or use a drive as it is:  bin/deucalion register /media/$USER/MyDrive
 bin/deucalion backup --dry-run                     # see what would be copied (largest folders too)
 bin/deucalion backup                               # back up
 bin/deucalion status
@@ -49,6 +52,7 @@ bin/deucalion status
 | Restore somewhere else | `deucalion restore ~/Documents --to ~/Desktop/recovered` |
 | Rebuild a new machine | `deucalion rebuild` (`--dry-run` to only look, `--step packages` to redo one step) |
 | Back up without the admin password | `deucalion backup --no-admin` (network connections and root-only `/etc` files are then skipped) |
+| Unlock / lock an encrypted drive | `deucalion open` / `deucalion close` (other commands ask for the password when needed) |
 | Check the backup is intact | `deucalion verify` (sizes) or `deucalion verify --full` (checksums) |
 | See / free space in `_removed/` | `deucalion removed` / `deucalion removed empty` |
 
@@ -85,8 +89,10 @@ On exFAT, a name that isn't allowed there is stored with a look-alike character
 
 On the new machine (fresh Ubuntu install, any username):
 
-1. Plug in the backup drive. Copy the Deucalion folder from it (or clone this repo).
-2. `bin/deucalion register /media/$USER/<drive>`, then `bin/deucalion rebuild`.
+1. Plug in the backup drive and open a terminal in its `Deucalion-Tool` folder (or clone this repo).
+2. Encrypted drive: `bin/deucalion open` (finds and registers the backup).
+   Unencrypted drive: `bin/deucalion register /media/$USER/<drive>`.
+3. `bin/deucalion rebuild`.
 
 The steps are:
 
@@ -101,10 +107,30 @@ The steps are:
 
 Every step can be skipped, and `deucalion rebuild` continues where you stopped.
 
+## Drive layouts
+
+`deucalion setup-drive` offers:
+
+| Layout | Erases the drive? | Readable on |
+|---|---|---|
+| Encrypt the whole drive | yes | VeraCrypt: Linux/macOS/Windows with VeraCrypt · LUKS: Linux |
+| Encrypted part + normal exFAT part | yes | encrypted part as above; normal part everywhere |
+| Encrypted folder (container file) on the drive | no | as above |
+| exFAT, no encryption | yes | everywhere |
+| Use the drive as it is (e.g. NTFS) | no | depends on the filesystem |
+
+Plain exFAT and LUKS drives are prepared through Ubuntu's disk service, with no
+administrator password. Creating or opening a VeraCrypt volume needs
+[VeraCrypt](https://www.veracrypt.fr/en/Downloads.html) and the administrator password.
+Each prepared drive gets a `READ-ME-FIRST.txt` and a copy of Deucalion on its
+unencrypted part.
+
 ## Development
 
 ```bash
 python3 -m unittest discover -s tests            # unit + integration tests
 # also run the suite on a real exFAT volume:
 DEUCALION_TEST_EXFAT=/media/$USER/TEST python3 -m unittest discover -s tests
+# and the LUKS drive-setup test on a disk image (needs a desktop session):
+DEUCALION_TEST_UDISKS=1 python3 -m unittest discover -s tests
 ```

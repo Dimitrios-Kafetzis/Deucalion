@@ -123,6 +123,17 @@ With option (a), whole-drive encryption, there is no unencrypted area. Install V
 - Still to do in v1: Docker image/volume export and VM disk images (currently only listed in
   `system/software/containers-and-vms.json`), and a polkit policy with a friendly prompt (M5).
 
+### Implementation notes (milestone 3)
+- Partitioning, exFAT formatting, LUKS creation, unlocking and mounting go through UDisks
+  (D-Bus): Ubuntu allows the logged-in user to do this on non-system drives, so no
+  administrator password is needed. A LUKS filesystem is created with `take-ownership`.
+- VeraCrypt volumes are created with the VeraCrypt CLI (`--stdin` for the password) and
+  opened with `cryptsetup --type tcrypt --veracrypt` through the administrator helper.
+  Encrypted partitions get the Linux partition type, so Windows doesn't offer to format them.
+- The admin helper re-checks on its own that it never touches the system disk.
+- Not yet verified on real hardware: VeraCrypt create/open, and exFAT formatting
+  (both need `exfatprogs`/VeraCrypt installed and the administrator password).
+
 ## 6. Encryption options
 
 | Option | Result | Readable on |

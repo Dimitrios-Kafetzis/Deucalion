@@ -495,7 +495,179 @@ def op_reload(emit, what: list[str]) -> dict:
     return {"reloaded": done}
 
 
+# ----------------------------------------------------------------------------------------------
+# VeraCrypt volumes (creating and unlocking them needs root; plain exFAT and LUKS drives are
+# handled by UDisks without administrator rights)
+
+_PART_RE = re.compile(r"^/dev/(sd[a-z]+\d+|nvme\d+n\d+p\d+|mmcblk\d+p\d+|vd[a-z]+\d+|loop\d+p\d+)$")
+_NAME_RE = re.compile(r"^deucalion-[a-z0-9-]{1,40}$")
+_LABEL_RE = re.compile(r"^[A-Za-z0-9 _.-]{1,15}$")
+_CONTAINER_DIRS = ("/media/", "/run/media/", "/mnt/")
+
+
+def _out(cmd: list[str], input_text: str | None = None) -> str:
+    r = subprocess.run(cmd, input=input_text, capture_output=True, text=True,
+                       env=dict(os.environ, LC_ALL="C.UTF-8", PATH="/usr/sbin:/usr/bin:/sbin:/bin"))
+    if r.returncode != 0:
+        raise OpError(f"{os.path.basename(cmd[0])} failed: {(r.stderr or r.stdout).strip()[-400:]}")
+    return r.stdout
+
+
+def _system_disks() -> set[str]:
+    """Disks that hold the running system: never touched, whatever the caller says."""
+    disks = set()
+    mounts = {}
+    for line in _out(["findmnt", "-rn", "-o", "TARGET,SOURCE"]).splitlines():
+        t, _, src = line.partition(" ")
+        mounts[t] = src
+    for mp in ("/", "/boot", "/boot/efi", "/home", "/usr", "/var"):
+        src = mounts.get(mp, "").split("[")[0]
+        if src.startswith("/dev/"):
+            tree = json.loads(_out(["lsblk", "-s", "-J", "-o", "NAME,PATH,TYPE", src]))
+            stack = list(tree.get("blockdevices", []))
+            while stack:
+                n = stack.pop()
+                if n.get("type") == "disk":
+                    disks.add(n["path"])
+                stack.extend(n.get("children") or [])
+    return disks
+
+
+def _check_source(source: str, must_exist: bool = True) -> None:
+    """A VeraCrypt volume is either a partition of a non-system disk or a file on a mounted drive."""
+    if source.startswith("/dev/"):
+        if not _PART_RE.match(source):
+            raise OpError(f"not a partition: {source}")
+        parent = "/dev/" + _out(["lsblk", "-no", "PKNAME", source]).strip()
+        if parent in _system_disks():
+            raise OpError(f"{source} is on the system disk; refusing to touch it")
+        return
+    real = os.path.realpath(source)
+    if not real.startswith(_CONTAINER_DIRS) or not real.endswith(".hc"):
+        raise OpError(f"not an allowed container file: {source}")
+    if must_exist and not os.path.isfile(real):
+        raise OpError(f"no such container file: {source}")
+
+
+def _settle() -> None:
+    subprocess.run(["udevadm", "settle"], capture_output=True)
+
+
+def _vc_open(device: str, name: str, passphrase: str, emit) -> str:
+    if not _NAME_RE.match(name):
+        raise OpError(f"bad mapping name {name}")
+    emit("Unlocking (VeraCrypt volumes can take up to a minute)…")
+    _out(["cryptsetup", "open", "--type", "tcrypt", "--veracrypt", device, name], passphrase + "\n")
+    _settle()
+    return f"/dev/mapper/{name}"
+
+
+def op_veracrypt_create(emit, source: str, passphrase: str, label: str, uid: int, gid: int,
+                        size_bytes: int = 0, veracrypt: str = "") -> dict:
+    """Create a VeraCrypt volume on a partition, or as a new container file, with exFAT inside."""
+    if len(passphrase) < 8:
+        raise OpError("the password is too short")
+    if not _LABEL_RE.match(label):
+        raise OpError(f"bad label {label!r}")
+    is_file = not source.startswith("/dev/")
+    _check_source(source, must_exist=False)
+    if is_file and os.path.exists(source):
+        raise OpError(f"{source} already exists")
+    vc = os.path.realpath(veracrypt or shutil.which("veracrypt") or "/usr/bin/veracrypt")
+    if not os.path.basename(vc).startswith("veracrypt") or not os.access(vc, os.X_OK):
+        raise OpError("VeraCrypt is not installed")
+    if not shutil.which("mkfs.exfat"):
+        raise OpError("mkfs.exfat is missing (install the exfatprogs package)")
+    cmd = [vc, "--text", "--non-interactive", "--create", source, "--volume-type=normal",
+           "--encryption=AES", "--hash=SHA-512", "--filesystem=none", "--pim=0", "--keyfiles=",
+           "--random-source=/dev/urandom", "--stdin"]
+    if is_file:
+        if int(size_bytes) < 64 * 1024 * 1024:
+            raise OpError("the encrypted folder must be at least 64 MB")
+        cmd.append(f"--size={int(size_bytes)}")
+    if source.startswith("/dev/"):
+        subprocess.run(["wipefs", "-a", source], capture_output=True)
+    emit("Encrypting (VeraCrypt)…")
+    _out(cmd, passphrase + "\n")
+    loop = None
+    device = source
+    if is_file:
+        loop = _out(["losetup", "--find", "--show", source]).strip()
+        device = loop
+    name = f"deucalion-new-{os.getpid()}"
+    try:
+        mapper = _vc_open(device, name, passphrase, emit)
+        emit("Creating the exFAT filesystem inside")
+        _out(["mkfs.exfat", "-L", label, mapper])
+    finally:
+        subprocess.run(["cryptsetup", "close", name], capture_output=True)
+        if loop:
+            subprocess.run(["losetup", "-d", loop], capture_output=True)
+    if is_file:
+        os.chown(source, int(uid), int(gid))
+    return {"source": source}
+
+
+def op_veracrypt_open(emit, source: str, passphrase: str, name: str, mount_name: str, user: str) -> dict:
+    """Unlock a VeraCrypt partition or container file and mount it at /media/<user>/<mount_name>."""
+    pw = pwd.getpwnam(user)
+    _check_source(source)
+    if not _LABEL_RE.match(mount_name):
+        raise OpError(f"bad mount name {mount_name!r}")
+    if os.path.exists(f"/dev/mapper/{name}"):
+        raise OpError("this drive is already unlocked")
+    loop = None
+    device = source
+    if not source.startswith("/dev/"):
+        loop = _out(["losetup", "--find", "--show", source]).strip()
+        device = loop
+    try:
+        mapper = _vc_open(device, name, passphrase, emit)
+    except OpError:
+        if loop:
+            subprocess.run(["losetup", "-d", loop], capture_output=True)
+        raise OpError("wrong password, or this is not a VeraCrypt volume") from None
+    base = f"/media/{user}"
+    os.makedirs(base, exist_ok=True)
+    mountpoint = os.path.join(base, mount_name)
+    n = 2
+    while os.path.ismount(mountpoint):
+        mountpoint = os.path.join(base, f"{mount_name}{n}")
+        n += 1
+    os.makedirs(mountpoint, exist_ok=True)
+    try:
+        _out(["mount", "-o", f"uid={pw.pw_uid},gid={pw.pw_gid},fmask=0022,dmask=0022", mapper, mountpoint])
+    except OpError:
+        subprocess.run(["cryptsetup", "close", name], capture_output=True)
+        if loop:
+            subprocess.run(["losetup", "-d", loop], capture_output=True)
+        raise
+    return {"mountpoint": mountpoint, "mapper": mapper, "loop": loop}
+
+
+def op_veracrypt_close(emit, mountpoint: str, name: str, loop: str | None = None) -> dict:
+    if not _NAME_RE.match(name):
+        raise OpError(f"bad mapping name {name}")
+    if mountpoint and os.path.ismount(mountpoint):
+        if not mountpoint.startswith("/media/"):
+            raise OpError("not a Deucalion mount point")
+        subprocess.run(["sync"])
+        _out(["umount", mountpoint])
+        try:
+            os.rmdir(mountpoint)
+        except OSError:
+            pass
+    if os.path.exists(f"/dev/mapper/{name}"):
+        _out(["cryptsetup", "close", name])
+    if loop and re.match(r"^/dev/loop\d+$", loop):
+        subprocess.run(["losetup", "-d", loop], capture_output=True)
+    return {"closed": True}
+
+
 OPS = {
+    "veracrypt_create": op_veracrypt_create,
+    "veracrypt_open": op_veracrypt_open,
+    "veracrypt_close": op_veracrypt_close,
     "netplan_import": op_netplan_import,
     "reload": op_reload,
     "collect_admin": op_collect_admin,
