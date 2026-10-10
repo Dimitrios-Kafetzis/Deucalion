@@ -175,6 +175,7 @@ def scan_etc() -> list[dict]:
             if not stat.S_ISREG(st.st_mode) or st.st_size > MAX_ETC_FILE:
                 continue
             item = {"path": path, "mode": stat.S_IMODE(st.st_mode), "uid": st.st_uid, "gid": st.st_gid,
+                    "owner": _name_of(pwd.getpwuid, st.st_uid), "group": _name_of(grp.getgrgid, st.st_gid),
                     "size": st.st_size, "readable": os.access(path, os.R_OK)}
             if path in conffiles:
                 md5, pkg = conffiles[path]
@@ -198,6 +199,21 @@ def scan_etc() -> list[dict]:
                 item.update(status="added" if recent else "installer", package="")
             found.append(item)
     return found
+
+
+def _name_of(lookup, num: int) -> str:
+    try:
+        return lookup(num)[0]
+    except KeyError:
+        return ""
+
+
+def _unique(path: str) -> str:
+    """path, or 'path (2)', 'path (3)'… whichever does not exist yet."""
+    cand, n = path, 2
+    while os.path.lexists(cand):
+        cand, n = f"{path} ({n})", n + 1
+    return cand
 
 
 def _write_if_changed(path: str, data: bytes, mode: int = 0o644) -> None:
@@ -341,12 +357,14 @@ def op_apt_add_source(emit, filename: str, content: str, keys: list[dict]) -> di
             f.write(data)
         os.chmod(path, 0o644)
         added_keys.append(path)
+    if not filename.startswith("deucalion-"):
+        raise OpError("Deucalion only adds its own deucalion-* source files")
     dest = os.path.join("/etc/apt/sources.list.d", filename)
-    if os.path.exists(dest):
-        shutil.copy2(dest, dest + ".deucalion-old")
-    with open(dest, "w", encoding="utf-8") as f:
+    if os.path.lexists(dest):
+        raise OpError(f"{dest} already exists; it was left unchanged")
+    fd = os.open(dest, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o644)
+    with os.fdopen(fd, "w", encoding="utf-8") as f:
         f.write(content)
-    os.chmod(dest, 0o644)
     return {"source": dest, "keys": added_keys}
 
 
@@ -360,7 +378,7 @@ def op_apt_install(emit, packages: list[str]) -> dict:
         raise OpError(f"bad package names: {bad}")
     if not packages:
         return {"code": 0}
-    return {"code": _run_streaming(["apt-get", "install", "-y", *packages], emit)}
+    return {"code": _run_streaming(["apt-get", "install", "-y", "--no-remove", *packages], emit)}
 
 
 def op_apt_install_debs(emit, paths: list[str]) -> dict:
@@ -370,7 +388,7 @@ def op_apt_install_debs(emit, paths: list[str]) -> dict:
         if not (p.endswith(".deb") and os.path.isfile(p)):
             raise OpError(f"not a .deb file: {p}")
         files.append(p)
-    return {"code": _run_streaming(["apt-get", "install", "-y", *files], emit)}
+    return {"code": _run_streaming(["apt-get", "install", "-y", "--no-remove", *files], emit)}
 
 
 def op_snap_install(emit, name: str, channel: str = "", classic: bool = False) -> dict:
@@ -384,7 +402,7 @@ def op_snap_install(emit, name: str, channel: str = "", classic: bool = False) -
     return {"code": _run_streaming(cmd, emit)}
 
 
-def op_put_etc_file(emit, src: str, dest: str, mode: int, undo_dir: str) -> dict:
+def op_put_etc_file(emit, src: str, dest: str, mode: int, undo_dir: str, owner: str = "", group: str = "") -> dict:
     dest = os.path.normpath(dest)
     if not dest.startswith("/etc/") or "/../" in dest or dest in ETC_NEVER:
         raise OpError(f"not an allowed /etc file: {dest}")
@@ -393,17 +411,33 @@ def op_put_etc_file(emit, src: str, dest: str, mode: int, undo_dir: str) -> dict
     undo_dir = os.path.normpath(undo_dir)
     if not undo_dir.startswith("/var/backups/deucalion/"):
         raise OpError("bad undo folder")
-    if os.path.lexists(dest):
-        aside = os.path.join(undo_dir, dest.lstrip("/"))
+    if os.path.isdir(dest) and not os.path.islink(dest):
+        raise OpError(f"{dest} is a folder here; left unchanged")
+    aside = None
+    if os.path.lexists(dest):  # keep the current version first (never overwriting an earlier copy)
+        aside = _unique(os.path.join(undo_dir, dest.lstrip("/")))
         os.makedirs(os.path.dirname(aside), exist_ok=True)
         shutil.copy2(dest, aside, follow_symlinks=False)
+        st = os.lstat(dest)
+        if not os.path.islink(dest):
+            os.lchown(aside, st.st_uid, st.st_gid)
     os.makedirs(os.path.dirname(dest), exist_ok=True)
-    tmp = dest + ".deucalion-tmp"
-    shutil.copyfile(src, tmp)
+    try:
+        uid = pwd.getpwnam(owner).pw_uid if owner else 0
+    except KeyError:
+        uid = 0
+    try:
+        gid = grp.getgrnam(group).gr_gid if group else 0
+    except KeyError:
+        gid = 0
+    tmp = _unique(dest + ".deucalion-tmp")
+    fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
+    with os.fdopen(fd, "wb") as f, open(src, "rb") as fi:
+        shutil.copyfileobj(fi, f)
+    os.chown(tmp, uid, gid)
     os.chmod(tmp, int(mode) & 0o7777)
-    os.chown(tmp, 0, 0)
     os.replace(tmp, dest)
-    return {"dest": dest}
+    return {"dest": dest, "kept": aside}
 
 
 def op_nm_import(emit, files: list[str]) -> dict:
@@ -449,11 +483,20 @@ def op_add_groups(emit, user: str, groups: list[str]) -> dict:
     return {"added": added}
 
 
-def op_put_crontab(emit, user: str, src: str) -> dict:
+def op_put_crontab(emit, user: str, src: str, undo_dir: str) -> dict:
     pwd.getpwnam(user)
     if not os.path.isfile(src):
         raise OpError(f"missing crontab file: {src}")
-    return {"code": _run_streaming(["crontab", "-u", user, src], emit)}
+    undo_dir = os.path.normpath(undo_dir)
+    if not undo_dir.startswith("/var/backups/deucalion/"):
+        raise OpError("bad undo folder")
+    current = f"/var/spool/cron/crontabs/{user}"
+    kept = None
+    if os.path.isfile(current) and not os.path.islink(current):
+        kept = _unique(os.path.join(undo_dir, f"crontab-{user}"))
+        os.makedirs(undo_dir, exist_ok=True)
+        shutil.copy2(current, kept)
+    return {"code": _run_streaming(["crontab", "-u", user, src], emit), "kept": kept}
 
 
 def op_netplan_import(emit, files: list[str]) -> dict:

@@ -80,6 +80,39 @@ class RegressionTest(BackupTestCase):
         self.assertIn("home/foo", self.removed_files())
         self.assertTrue((self.target.root / "home/foo/bar/x.txt").exists())
 
+    def test_partial_backup_with_new_item_keeps_out_of_scope_siblings(self):
+        self.write("Docs/Personal/a.txt", "a")
+        self.write("Docs/Work/b.txt", "b")
+        self.backup()
+        self.write("Docs/New/c.txt", "c")           # a new sibling: the drive folder gets listed
+        plan, _ = self.backup(only=[str(self.home / "Docs/New")])
+        self.assertEqual(plan.removed_items, 0)
+        self.assertTrue((self.target.root / "home/Docs/Personal/a.txt").exists())
+        self.assertTrue((self.target.root / "home/Docs/Work/b.txt").exists())
+        m = self.target.manifest()
+        try:
+            from deucalion.verify import verify
+            self.assertTrue(verify(self.target, m, full=True).ok)
+        finally:
+            m.close()
+
+    def test_case_twin_leftovers_from_killed_run_are_cleaned(self):
+        self.write("x/Notes", "1")
+        self.write("x/notes", "2")
+        self.backup()
+        m = Manifest(self.target.meta_dir / "manifest.sqlite")
+        m.delete_tree("home/x/Notes")
+        m.delete_tree("home/x/notes")              # as if both were copied but never recorded
+        m.close()
+        self.backup()
+        self.assertEqual(sorted(os.listdir(self.target.root / "home/x")), ["Notes", "notes (2)"])
+        m = self.target.manifest()
+        try:
+            stored = {e.stored for e in m.iter_tree("home/x") if e.kind == "f"}
+        finally:
+            m.close()
+        self.assertEqual(stored, {"home/x/Notes", "home/x/notes (2)"})
+
     def test_manifest_copy_after_completed_run(self):
         self.write("f.txt", "x")
         self.backup()

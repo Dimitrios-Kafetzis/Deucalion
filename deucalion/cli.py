@@ -518,10 +518,11 @@ def cmd_rebuild(cfg: Config, args) -> int:
     if not interactive and not args.yes and not args.dry_run:
         raise DeucalionError("rebuild needs a terminal to ask you questions (or use --dry-run / --yes).")
     printer = ProgressPrinter()
-    with target.lock():
+    with target.lock(), GracefulCancel() as cancel:
         m = target.manifest()
         log, log_paths = open_run_log(target, "rebuild")
         ctx = rebuild.Context(cfg, target, m, log)
+        ctx.cancel = cancel
         state = rebuild.load_state(target)
         steps = [s for s in rebuild.STEPS if not args.step or s.name == args.step]
         report: list[tuple[str, str, list[str]]] = []
@@ -565,6 +566,10 @@ def cmd_rebuild(cfg: Config, args) -> int:
                 printer.clear()
                 for w in warnings:
                     print(yellow(f"    {w}"))
+                if cancel.is_set():
+                    rebuild.save_state(state, step.name, "stopped", warnings)
+                    print(yellow("Stopped. Run 'deucalion rebuild' again to continue."))
+                    break
                 rebuild.save_state(state, step.name, "done", warnings)
                 report.append((step.title, "done", warnings))
         finally:
@@ -929,6 +934,37 @@ def cmd_close(cfg: Config, args) -> int:
     return 0
 
 
+def cmd_deps(cfg, args) -> int:
+    from . import deps
+    rows = deps.report()
+    print(bold("What Deucalion needs"))
+    for pkg, ok, why in rows:
+        print(f"  {green('✓') if ok else red('✗')} {pkg:<16} {dim(why)}")
+    if not args.install:
+        missing = [p for p, ok, _ in rows if not ok]
+        if missing:
+            print(f"\nInstall what is missing with: deucalion deps --install")
+        return 0 if all(ok for p, ok, _ in rows if p != "veracrypt") else 1
+    missing = [d.package for d in deps.missing_packages()]
+    if missing:
+        if not confirm(f"\nInstall {', '.join(missing)} now?", args.yes):
+            print("Skipped. Some features will not work until these are installed.")
+        else:
+            deps.apt_install(missing)
+    if not deps.veracrypt_installed() and not args.no_veracrypt:
+        want = args.veracrypt or confirm(
+            "\nInstall VeraCrypt? It is needed only for VeraCrypt-encrypted drives (readable on Linux, macOS and "
+            "Windows). The official package is downloaded and its signature checked before installing.", args.yes)
+        if want:
+            deps.install_veracrypt()
+    still = [d.package for d in deps.missing_packages()]
+    if still:
+        print(yellow(f"Still missing: {', '.join(still)}"))
+        return 1
+    print(green("Everything Deucalion needs is installed."))
+    return 0
+
+
 def cmd_gui(cfg, args) -> int:
     try:
         from .gui.app import run_gui
@@ -955,6 +991,11 @@ def build_parser() -> argparse.ArgumentParser:
         sp.add_argument("--target", metavar="NAME", help="which registered drive to use")
 
     add("gui", cmd_gui, "open the app (also what plain 'deucalion' does)")
+    sp = add("deps", cmd_deps, "check (and install) what Deucalion needs, including VeraCrypt")
+    sp.add_argument("--install", action="store_true", help="install what is missing")
+    sp.add_argument("--veracrypt", action="store_true", help="also install VeraCrypt without asking")
+    sp.add_argument("--no-veracrypt", action="store_true", help="don't install VeraCrypt")
+    sp.add_argument("-y", "--yes", action="store_true", help="don't ask for confirmation")
     add("drives", cmd_drives, "list connected drives")
 
     sp = add("register", cmd_register, "use a drive (or a folder on it) for backups")
@@ -1046,6 +1087,11 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main(argv: list[str] | None = None) -> int:
+    for stream in (sys.stdout, sys.stderr):  # never crash on file names that aren't valid UTF-8
+        try:
+            stream.reconfigure(errors="backslashreplace")
+        except (AttributeError, ValueError):
+            pass
     parser = build_parser()
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):

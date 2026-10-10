@@ -216,7 +216,7 @@ class DriveSetup:
                   "plain_path": str(folder), "mount_name": label}
         if req.method == "luks":
             self.out(f"Creating {path.name} ({req.size // 1024 ** 2:,} MB)…")
-            with open(path, "wb") as f:
+            with open(path, "xb") as f:  # never over an existing file
                 f.truncate(req.size)
             loop = self.u.loop_setup(str(path))
             self.out("Encrypting (LUKS)…")
@@ -437,6 +437,12 @@ def install_tool_copy(plain_root: Path, target: Target | None, access: dict) -> 
     """Copy Deucalion and a READ-ME-FIRST file to the unencrypted part of the drive."""
     src = Path(__file__).resolve().parent.parent
     dest = plain_root / TOOL_DIRNAME
+    if dest.exists() and not _is_our_tool_copy(dest):
+        # Something of the user's has this name: never replace it.
+        dest = plain_root / f"{TOOL_DIRNAME} (Deucalion)"
+        if dest.exists() and not _is_our_tool_copy(dest):
+            raise DeucalionError(f"{plain_root / TOOL_DIRNAME} belongs to you, so the copy of Deucalion was not "
+                                 "put on the drive.")
     tmp = plain_root / f".{TOOL_DIRNAME}.new"
     shutil.rmtree(tmp, ignore_errors=True)
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".git", "tests", "*.img")
@@ -454,8 +460,21 @@ def install_tool_copy(plain_root: Path, target: Target | None, access: dict) -> 
     write_json_atomic(tmp / "drive.json", info)
     shutil.rmtree(dest, ignore_errors=True)
     os.rename(tmp, dest)
-    (plain_root / README_NAME).write_text(readme_text(access), encoding="utf-8")
+    readme = plain_root / README_NAME
+    try:
+        ours = not readme.exists() or readme.read_text(encoding="utf-8", errors="replace").startswith("DEUCALION BACKUP DRIVE")
+    except OSError:
+        ours = False
+    if not ours:
+        readme = plain_root / "READ-ME-FIRST (Deucalion).txt"
+    readme.write_text(readme_text(access), encoding="utf-8")
     return dest
+
+
+def _is_our_tool_copy(folder: Path) -> bool:
+    """True only for a folder Deucalion itself put on the drive (it has our drive.json)."""
+    info = read_json(folder / "drive.json") if (folder / "drive.json").is_file() else None
+    return isinstance(info, dict) and "version" in info and "method" in info
 
 
 def plain_root_of(cfg: Config, target: Target) -> Path | None:

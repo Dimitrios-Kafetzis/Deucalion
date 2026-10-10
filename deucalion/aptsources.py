@@ -29,13 +29,22 @@ class Repo:
     @property
     def kind(self) -> str:
         uri = self.uris[0] if self.uris else ""
-        if UBUNTU_HOSTS.match(uri):
-            return "ubuntu"
-        if OEM_HOSTS.match(uri):
-            return "oem"
         if PPA_HOSTS.match(uri):
             return "ppa"
+        if OEM_HOSTS.match(uri):
+            return "oem"
+        if UBUNTU_HOSTS.match(uri) or self.is_ubuntu_mirror:
+            return "ubuntu"
         return "third-party"
+
+    @property
+    def is_ubuntu_mirror(self) -> bool:
+        """A local mirror of Ubuntu's archive (e.g. http://ftp.cc.uoc.gr/mirrors/linux/ubuntu/packages/)."""
+        uri = (self.uris[0] if self.uris else "").rstrip("/")
+        ubuntu_path = "/ubuntu" in uri.lower() or uri.lower().endswith("/ubuntu-ports")
+        ubuntu_key = "ubuntu-archive-keyring" in (self.signed_by or "")
+        ubuntu_parts = bool(set(self.components) & {"main", "restricted", "universe", "multiverse"})
+        return ubuntu_key or (ubuntu_path and ubuntu_parts)
 
     @property
     def label(self) -> str:

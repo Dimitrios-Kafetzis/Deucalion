@@ -250,6 +250,24 @@ class BackupTest(BackupTestCase):
             job.close()
         self.assertFalse(store.exists())
 
+    def test_sneaky_edit_with_same_size_and_mtime_is_detected(self):
+        p = self.write("doc.txt", "AAAA", mtime=1_600_000_000_000_000_000)
+        self.backup()
+        p.write_text("BBBB")                                   # same size
+        os.utime(p, ns=(1_600_000_000_000_000_000, 1_600_000_000_000_000_000))  # mtime put back
+        plan, _ = self.backup()
+        self.assertEqual([a.entry.path for a in plan.actions if a.op == "copy"], ["home/doc.txt"])
+        self.assertEqual((self.target.root / "home/doc.txt").read_text(), "BBBB")
+        self.assertIn("home/doc.txt", self.removed_files())
+
+    def test_chmod_only_does_not_recopy(self):
+        p = self.write("big.bin", b"x" * 100000)
+        self.backup()
+        os.chmod(p, 0o600)
+        plan, _ = self.backup()
+        self.assertEqual(plan.copy_files, 0)
+        self.assertEqual(Manifest(self.target.meta_dir / "manifest.sqlite").get("home/big.bin").mode, 0o600)
+
     def test_summary_written(self):
         populate(self)
         self.backup()

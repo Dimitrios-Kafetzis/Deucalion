@@ -66,7 +66,7 @@ def on_main(func: Callable, *args) -> None:
 def alert(parent, heading: str, body: str = "", responses=(("ok", "OK"),), default: str | None = None,
           destructive: str | None = None, suggested: str | None = None, callback: Callable | None = None,
           extra: Gtk.Widget | None = None) -> Adw.AlertDialog:
-    d = Adw.AlertDialog(heading=heading, body=body)
+    d = Adw.AlertDialog(heading=safe(heading), body=safe(body))
     for rid, label in responses:
         d.add_response(rid, label)
     if destructive:
@@ -110,9 +110,14 @@ def open_folder(path: Path) -> None:
 # Widgets
 
 
+def safe(text: str) -> str:
+    """GTK needs valid UTF-8: show bytes of odd file names as escapes."""
+    return text.encode("utf-8", "backslashreplace").decode("utf-8")
+
+
 def label(text: str = "", css: tuple[str, ...] = (), wrap: bool = True, xalign: float = 0.0,
           selectable: bool = False) -> Gtk.Label:
-    lab = Gtk.Label(label=text, xalign=xalign, wrap=wrap, selectable=selectable)
+    lab = Gtk.Label(label=safe(text), xalign=xalign, wrap=wrap, selectable=selectable)
     if wrap:
         lab.set_wrap_mode(Pango.WrapMode.WORD_CHAR)
     for c in css:
@@ -140,7 +145,7 @@ def button(text: str, on_click: Callable | None = None, css: tuple[str, ...] = (
 
 def row(title: str, subtitle: str = "", icon: str | None = None, suffix: Gtk.Widget | None = None,
         activatable: bool = False) -> Adw.ActionRow:
-    r = Adw.ActionRow(title=GLib.markup_escape_text(title), subtitle=GLib.markup_escape_text(subtitle))
+    r = Adw.ActionRow(title=GLib.markup_escape_text(safe(title)), subtitle=GLib.markup_escape_text(safe(subtitle)))
     r.set_subtitle_lines(3)
     if icon:
         r.add_prefix(Gtk.Image(icon_name=icon))

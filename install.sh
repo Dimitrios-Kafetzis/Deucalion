@@ -4,11 +4,12 @@
 #   ~/.local/bin/deucalion          the command
 #   app menu entry and icon
 #
-#   ./install.sh                    install / update
+#   ./install.sh                    check and install what is needed, then install Deucalion
 #   ./install.sh --system-helper    also install the administrator helper system-wide (asks for
 #                                   your password): a root-owned copy, so code that runs as root
 #                                   can't be changed by other programs, and a clearer password prompt
 #   ./install.sh --uninstall        remove it (your backups and settings are kept)
+# Extra options: --veracrypt / --no-veracrypt (install VeraCrypt or not, without asking), --yes
 set -euo pipefail
 SRC="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 APP_ID=io.github.DimitriosKafetzis.Deucalion
@@ -18,18 +19,33 @@ BIN="$HOME/.local/bin"
 HELPER_DIR=/usr/local/libexec/deucalion
 POLICY=/usr/share/polkit-1/actions/$APP_ID.policy
 
-if [[ "${1:-}" == "--uninstall" ]]; then
+SYSTEM_HELPER=0; UNINSTALL=0; DEPS_ARGS=()
+for arg in "$@"; do
+    case "$arg" in
+        --system-helper) SYSTEM_HELPER=1 ;;
+        --uninstall) UNINSTALL=1 ;;
+        --veracrypt|--no-veracrypt|--yes|-y) DEPS_ARGS+=("$arg") ;;
+        *) echo "Unknown option: $arg"; exit 2 ;;
+    esac
+done
+as_admin() { if [[ -t 0 ]]; then sudo "$@"; else pkexec "$@"; fi; }
+
+if [[ $UNINSTALL == 1 ]]; then
     rm -rf "$DEST" "$BIN/deucalion" "$DATA/applications/$APP_ID.desktop" \
            "$DATA/icons/hicolor/scalable/apps/$APP_ID.svg" "$DATA/icons/hicolor/symbolic/apps/$APP_ID-symbolic.svg"
     if [[ -e "$HELPER_DIR" || -e "$POLICY" ]]; then
         echo "Removing the system helper (asks for your password)…"
-        sudo rm -rf "$HELPER_DIR" "$POLICY"
+        as_admin rm -rf "$HELPER_DIR" "$POLICY"
     fi
     echo "Deucalion was removed. Your backups and ~/.config/deucalion are kept."
     exit 0
 fi
 
 python3 -c 'import sys; sys.exit(sys.version_info < (3, 10))' || { echo "Python 3.10 or newer is needed."; exit 1; }
+
+echo "Checking what Deucalion needs…"
+python3 "$SRC/bin/deucalion" deps --install "${DEPS_ARGS[@]}" || echo "Continuing; see above for what is missing."
+echo
 
 echo "Installing Deucalion into $DEST"
 rm -rf "$DEST.new"
@@ -49,11 +65,11 @@ cp "$SRC/data/icons/hicolor/symbolic/apps/$APP_ID-symbolic.svg" "$DATA/icons/hic
 command -v update-desktop-database >/dev/null && update-desktop-database "$DATA/applications" 2>/dev/null || true
 command -v gtk4-update-icon-cache >/dev/null && gtk4-update-icon-cache -q -t "$DATA/icons/hicolor" 2>/dev/null || true
 
-if [[ "${1:-}" == "--system-helper" ]]; then
+if [[ $SYSTEM_HELPER == 1 ]]; then
     echo "Installing the administrator helper (asks for your password)…"
-    sudo install -d -m 0755 -o root -g root "$HELPER_DIR"
-    sudo install -m 0755 -o root -g root "$SRC/deucalion/helper.py" "$HELPER_DIR/helper.py"
-    sudo install -m 0644 -o root -g root "$SRC/data/$APP_ID.policy" "$POLICY"
+    as_admin sh -c "install -d -m 0755 -o root -g root '$HELPER_DIR' && \
+        install -m 0755 -o root -g root '$SRC/deucalion/helper.py' '$HELPER_DIR/helper.py' && \
+        install -m 0644 -o root -g root '$SRC/data/$APP_ID.policy' '$POLICY'"
 fi
 
 case ":$PATH:" in

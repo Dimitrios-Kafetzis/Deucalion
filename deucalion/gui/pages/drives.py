@@ -240,13 +240,25 @@ class SetupWizard:
         page.add(g)
         if not vc:
             info = Adw.PreferencesGroup()
-            link = Gtk.LinkButton(uri=drivesetup.VERACRYPT_URL, label="Get VeraCrypt for Ubuntu")
-            info.add(row("To use VeraCrypt, install it first", "Download the Ubuntu .deb file and open it. "
-                                                              "Then come back here.", "dialog-information-symbolic", link))
+            info.add(row("VeraCrypt is not installed yet", "Deucalion can install it: the official package is "
+                         "downloaded and its signature checked first. Asks for your administrator password.",
+                         "dialog-information-symbolic", button("Install", self._install_veracrypt, ("suggested-action",))))
             page.add(info)
         self.method = "veracrypt" if vc else "luks"
         checks[0 if vc else 1].set_active(True)
         return self._page("Encryption", page, "Next", lambda: self.nav.push(self._page_details()))
+
+    def _install_veracrypt(self):
+        from ... import deps
+        toast(self.owner.widget, "Installing VeraCrypt… you will be asked for your administrator password.")
+
+        def done(_r):
+            toast(self.owner.widget, "VeraCrypt is installed")
+            self.nav.pop()
+            self.nav.push(self._page_method())
+
+        run_async(lambda: deps.install_veracrypt(out=lambda s: None), done,
+                  lambda msg: alert(self.win, "Could not install VeraCrypt", msg))
 
     def _page_details(self):
         page = Adw.PreferencesPage()

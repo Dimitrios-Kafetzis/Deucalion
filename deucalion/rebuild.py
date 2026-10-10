@@ -10,11 +10,15 @@ from __future__ import annotations
 
 import base64
 import difflib
+import errno
 import json
 import logging
 import os
+import re
 import shutil
+import stat
 import subprocess
+import threading
 from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -74,6 +78,7 @@ class Context:
         self.new_version = osr.get("VERSION_ID", "")
         self.has_recipe = bool(self.info)
         self.stamp = run_stamp()
+        self.cancel = threading.Event()   # set to stop a long step (the home restore) safely
 
     # -- reading the backup ---------------------------------------------------------------------
     def drive_path(self, logical: str) -> Path | None:
@@ -113,8 +118,36 @@ class Context:
     def home_changed(self) -> bool:
         return bool(self.old_home) and self.old_home != self.new_home
 
+    def _home_re(self, as_bytes: bool):
+        # The old home path only as a whole path: '/home/dim' in '/home/dim/x' or '/home/dim"', never
+        # inside '/home/dimension' or '/home/dimitris' (which may be the NEW home path).
+        old = re.escape(self.old_home.encode() if as_bytes else self.old_home)
+        return re.compile(old + (rb"(?=[/\s\"':;,]|$)" if as_bytes else r"(?=[/\s\"':;,]|$)"), re.M)
+
     def map_paths(self, text: str) -> str:
-        return text.replace(self.old_home, self.new_home) if self.home_changed else text
+        if not self.home_changed:
+            return text
+        return self._home_re(False).sub(lambda m: self.new_home, text)
+
+    def map_paths_bytes(self, data: bytes) -> bytes:
+        if not self.home_changed:
+            return data
+        return self._home_re(True).sub(lambda m: self.new_home.encode(), data)
+
+    def count_old_home(self, data: bytes) -> int:
+        return len(self._home_re(True).findall(data)) if self.home_changed else 0
+
+    def undo_dir(self, what: str) -> Path:
+        """A new, empty folder for the originals changed by one step run (never reused)."""
+        base = Path(self.new_home) / UNDO_DIRNAME
+        n = 1
+        while True:
+            d = base / f"{run_stamp()}-{what}" if n == 1 else base / f"{run_stamp()}-{what}-{n}"
+            try:
+                d.mkdir(parents=True)
+                return d
+            except FileExistsError:
+                n += 1
 
     def priv(self) -> Privileged:
         if self._priv is None:
@@ -171,6 +204,9 @@ class CheckStep(Step):
         return p
 
 
+DISTRO_SOURCE_FILES = {"ubuntu.sources", "ubuntu-esm-apps.sources", "ubuntu-esm-infra.sources"}
+
+
 class ReposStep(Step):
     name, title, needs_admin = "repositories", "Software sources (apt repositories)", True
 
@@ -192,6 +228,8 @@ class ReposStep(Step):
                 repos = aptsources.parse(path.read_text(errors="replace"), name)
             except OSError:
                 continue
+            if name in DISTRO_SOURCE_FILES:
+                continue  # the new system's own sources: never touched
             repos = [r for r in repos if r.enabled and r.kind != "ubuntu" and "deb" in r.types]
             if repos:
                 candidates.append((name, repos))
@@ -224,7 +262,7 @@ class ReposStep(Step):
                 detail += f"  (hardware-specific: {old_model or 'other model'})"
                 selected = selected and bool(same)
             p.items.append(Item(name, r0.label, detail, selected, True,
-                                {"file": name if name != "sources.list" else "deucalion-restored.list",
+                                {"file": "deucalion-" + (name if name != "sources.list" else "restored.list"),
                                  "content": content, "keys": keys}))
         return p
 
@@ -374,11 +412,13 @@ class HomeStep(Step):
                 paths.append(i.data)
         if not paths:
             return []
-        r = Restorer(ctx.cfg, ctx.t, ctx.m, on_progress=on_progress, log=ctx.log)
+        r = Restorer(ctx.cfg, ctx.t, ctx.m, on_progress=on_progress, cancel=ctx.cancel, log=ctx.log)
         plan = r.plan(paths)
         out(f"Restoring {plan.copy_files:,} files ({human_size(plan.copy_bytes)}); "
             f"{plan.count('overwrite'):,} existing files will be moved aside first…")
         res = r.execute(plan)
+        if res.status == "cancelled":
+            out("Stopped. Files restored so far stay; run this step again to finish.")
         if res.undo_dir:
             out(f"Replaced files are kept in {res.undo_dir}")
         out(f"Restored {res.restored_files:,} files.")
@@ -394,7 +434,6 @@ class PathsStep(Step):
         if not ctx.home_changed:
             p.notes.append("Your home folder path did not change; nothing to do.")
             return p
-        old = ctx.old_home.encode()
         home = Path(ctx.new_home)
         for e in ctx.m.iter_tree("home"):
             rel = e.path[len("home/"):] if e.path != "home" else ""
@@ -402,15 +441,19 @@ class PathsStep(Step):
                 continue
             path = home / rel
             if e.kind == "l":
-                if e.link and e.link.startswith(ctx.old_home) and path.is_symlink():
+                if e.link and ctx.map_paths(e.link) != e.link and path.is_symlink():
                     p.items.append(Item(rel, f"~/{rel}", f"link → {e.link}", True, True, {"type": "link", "path": str(path)}))
             elif e.kind == "f" and e.size <= self.MAX_SIZE:
                 try:
+                    st = os.lstat(path)
+                    if not stat.S_ISREG(st.st_mode):
+                        continue  # e.g. now a symlink to a dotfiles repository: leave it alone
                     data = path.read_bytes()
                 except OSError:
                     continue
-                if old in data and b"\0" not in data[:4096]:
-                    p.items.append(Item(rel, f"~/{rel}", f"{data.count(old)} mention(s) of {ctx.old_home}", True, True,
+                n = ctx.count_old_home(data)
+                if n and b"\0" not in data[:4096]:
+                    p.items.append(Item(rel, f"~/{rel}", f"{n} mention(s) of {ctx.old_home}", True, True,
                                         {"type": "file", "path": str(path)}))
         if not p.items:
             p.notes.append(f"No settings files mention {ctx.old_home}.")
@@ -418,21 +461,28 @@ class PathsStep(Step):
 
     def apply(self, ctx: Context, items: list[Item], out: Out) -> list[str]:
         warnings = []
-        undo = Path(ctx.new_home) / UNDO_DIRNAME / f"{ctx.stamp}-paths"
+        if not items:
+            return warnings
+        undo = ctx.undo_dir("paths")
         for i in items:
             path = Path(i.data["path"])
             try:
                 aside = undo / path.relative_to("/")
                 aside.parent.mkdir(parents=True, exist_ok=True)
+                st = os.lstat(path)
                 if i.data["type"] == "link":
+                    if not stat.S_ISLNK(st.st_mode):
+                        raise OSError(errno.EEXIST, "it is not a link any more; left unchanged")
                     target = os.readlink(path)
                     os.symlink(target, aside)
-                    path.unlink()
-                    os.symlink(ctx.map_paths(target), path)
+                    tmp = path.with_name(f".{path.name[:100]}.deucalion-tmp")
+                    os.symlink(ctx.map_paths(target), tmp)
+                    os.replace(tmp, path)  # atomic: the link is never missing
                 else:
+                    if not stat.S_ISREG(st.st_mode) or st.st_nlink > 1:
+                        raise OSError(errno.EEXIST, "it is a link or has other names now; left unchanged")
                     shutil.copy2(path, aside)
-                    data = path.read_bytes().replace(ctx.old_home.encode(), ctx.new_home.encode())
-                    st = path.stat()
+                    data = ctx.map_paths_bytes(path.read_bytes())
                     tmp = path.with_name(path.name + ".deucalion-tmp")
                     tmp.write_bytes(data)
                     os.chmod(tmp, st.st_mode & 0o7777)
@@ -470,6 +520,12 @@ class DesktopStep(Step):
         if not items:
             return []
         text = ctx.map_paths(ctx.read_text("desktop/dconf.ini") or "")
+        current = subprocess.run(["dconf", "dump", "/"], capture_output=True, text=True)
+        if current.returncode != 0:
+            return ["The current desktop settings could not be saved first, so nothing was changed."]
+        keep = ctx.undo_dir("desktop") / "dconf-before.ini"
+        keep.write_text(current.stdout)
+        out(f"Your current desktop settings are saved in {keep} (undo: dconf load / < that file)")
         res = subprocess.run(["dconf", "load", "/"], input=text, text=True, capture_output=True)
         if res.returncode != 0:
             return [f"Desktop settings could not be loaded: {res.stderr.strip()}"]
@@ -517,7 +573,8 @@ class SystemConfigStep(Step):
             # or it is a package's own config file you had changed.
             safe = path.startswith(ETC_SAFE) and (not exists or it.get("status") == "modified")
             p.items.append(Item(path, path, detail, safe, True,
-                                {"src": str(src), "mode": it.get("mode", 0o644), "current": cur, "new": new}))
+                                {"src": str(src), "mode": it.get("mode", 0o644), "current": cur, "new": new,
+                                 "owner": it.get("owner", ""), "group": it.get("group", "")}))
         if hidden:
             p.notes.append(f"{hidden} more files are kept in the backup for reference only (system identity, "
                            "disks, login, repositories and network are handled separately or by the installer).")
@@ -534,11 +591,12 @@ class SystemConfigStep(Step):
         if not items:
             return warnings
         priv = ctx.priv()
-        undo = f"/var/backups/deucalion/{ctx.stamp}"
+        undo = f"/var/backups/deucalion/{run_stamp()}"
         reloads = set()
         for i in items:
             try:
-                priv.call("put_etc_file", src=i.data["src"], dest=i.key, mode=i.data["mode"], undo_dir=undo)
+                priv.call("put_etc_file", src=i.data["src"], dest=i.key, mode=i.data["mode"], undo_dir=undo,
+                          owner=i.data.get("owner", ""), group=i.data.get("group", ""))
                 out(f"Restored {i.key}")
                 reloads |= {v for k, v in RELOAD_FOR.items() if i.key.startswith(k)}
             except DeucalionError as e:
@@ -614,14 +672,20 @@ class ServicesStep(Step):
                                   groups=[i.data["group"] for i in by_type["group"]])
             out(f"Added you to: {', '.join(res.get('added', []))} (takes effect after you log in again)")
         for i in by_type.get("cron", []):
+            current = subprocess.run(["crontab", "-l"], capture_output=True, text=True)
+            if current.returncode == 0 and current.stdout.strip():
+                keep = ctx.undo_dir("crontab") / "crontab-before.txt"
+                keep.write_text(current.stdout)
+                out(f"Your current crontab is saved in {keep}")
             r = subprocess.run(["crontab", "-"], input=i.data["text"], text=True, capture_output=True)
             if r.returncode:
                 warnings.append(f"crontab: {r.stderr.strip()}")
             else:
                 out("Restored your crontab")
         for i in by_type.get("rootcron", []):
-            ctx.priv().call("put_crontab", user="root", src=i.data["src"])
-            out("Restored root's crontab")
+            r = ctx.priv().call("put_crontab", user="root", src=i.data["src"],
+                                undo_dir=f"/var/backups/deucalion/{run_stamp()}")
+            out("Restored root's crontab" + (f" (the previous one is kept in {r['kept']})" if r.get("kept") else ""))
         if "uunit" in by_type:
             units = [i.data["unit"] for i in by_type["uunit"]]
             r = subprocess.run(["systemctl", "--user", "enable", *units], capture_output=True, text=True)

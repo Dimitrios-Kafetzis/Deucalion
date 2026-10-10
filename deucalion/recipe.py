@@ -79,6 +79,12 @@ class _Writer:
         if isinstance(data, str):
             data = data.encode("utf-8", "surrogateescape")
         path = self.root / rel
+        real_root = os.path.realpath(self.root)
+        if not os.path.realpath(path.parent).startswith(real_root + os.sep) and \
+                os.path.realpath(path.parent) != real_root:
+            raise DeucalionError(f"refusing to write outside the recipe folder: {rel}")
+        if path.is_symlink():
+            path.unlink()  # never write through a link someone placed here
         helper._write_if_changed(str(path), data, mode)
         self.written.add(str(path))
 
@@ -389,9 +395,10 @@ def collect(home: Path, privileged=None, log: logging.Logger | None = None) -> R
 
 def _take_admin_folder(w: _Writer, folder: Path) -> None:
     """Copy what the administrator helper collected into the recipe (as the normal user)."""
+    if not str(folder).startswith("/tmp/deucalion-admin-") or folder.is_symlink() or not folder.is_dir() \
+            or folder.stat().st_uid != os.getuid():
+        raise DeucalionError("unexpected folder from the administrator helper")
     try:
-        if folder.is_symlink() or not folder.is_dir() or folder.stat().st_uid != os.getuid():
-            raise DeucalionError("unexpected folder from the administrator helper")
         for dirpath, dirs, files in os.walk(folder):
             for n in files:
                 p = Path(dirpath) / n

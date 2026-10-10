@@ -139,7 +139,7 @@ class ActionStore:
     """Planned actions, kept in a temporary SQLite file instead of in memory:
     a first backup of a home folder can easily plan millions of files."""
 
-    _COLS = "op, replace, path, stored, kind, mode, uid, gid, owner, grp, size, mtime_ns, link, sha256"
+    _COLS = "op, replace, path, stored, kind, mode, uid, gid, owner, grp, size, mtime_ns, link, sha256, ctime_ns"
 
     def __init__(self, sources: list[Source]):
         d = state_dir() / "tmp"
@@ -153,7 +153,7 @@ class ActionStore:
         self.db.execute(
             "CREATE TABLE a (seq INTEGER PRIMARY KEY, op TEXT, replace INTEGER, path BLOB, stored BLOB, "
             "kind TEXT, mode INTEGER, uid INTEGER, gid INTEGER, owner TEXT, grp TEXT, size INTEGER, "
-            "mtime_ns INTEGER, link BLOB, sha256 TEXT)")
+            "mtime_ns INTEGER, link BLOB, sha256 TEXT, ctime_ns INTEGER)")
         self._buf: list[tuple] = []
         self._count = 0
         self._origins = sorted(((s.name, str(s.origin)) for s in sources), key=lambda x: -len(x[0]))
@@ -162,14 +162,14 @@ class ActionStore:
         e = a.entry
         self._buf.append((a.op, int(a.replace), os.fsencode(e.path), os.fsencode(e.stored), e.kind, e.mode,
                           e.uid, e.gid, e.owner, e.grp, e.size, e.mtime_ns,
-                          None if e.link is None else os.fsencode(e.link), e.sha256))
+                          None if e.link is None else os.fsencode(e.link), e.sha256, e.ctime_ns))
         self._count += 1
         if len(self._buf) >= 10000:
             self._flush()
 
     def _flush(self) -> None:
         if self._buf:
-            self.db.executemany(f"INSERT INTO a ({self._COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)", self._buf)
+            self.db.executemany(f"INSERT INTO a ({self._COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)", self._buf)
             self.db.commit()
             self._buf.clear()
 
@@ -189,7 +189,7 @@ class ActionStore:
         for r in self.db.execute(f"SELECT {self._COLS} FROM a ORDER BY seq"):
             path = os.fsdecode(r[2])
             e = Entry(path, os.fsdecode(r[3]), r[4], r[5], r[6], r[7], r[8], r[9], r[10], r[11],
-                      None if r[12] is None else os.fsdecode(r[12]), r[13])
+                      None if r[12] is None else os.fsdecode(r[12]), r[13], r[14] or 0)
             yield Action(r[0], e, self._src_of(path) if r[0] == "copy" else None, bool(r[1]))
 
     def close(self) -> None:
@@ -298,7 +298,8 @@ class Scanner:
     def _entry(self, path: str, stored: str, kind: str, st: os.stat_result, link: str | None = None) -> Entry:
         return Entry(path=path, stored=stored, kind=kind, mode=stat.S_IMODE(st.st_mode),
                      uid=st.st_uid, gid=st.st_gid, owner=_uname(st.st_uid), grp=_gname(st.st_gid),
-                     size=st.st_size if kind == "f" else 0, mtime_ns=st.st_mtime_ns, link=link)
+                     size=st.st_size if kind == "f" else 0, mtime_ns=st.st_mtime_ns, link=link,
+                     ctime_ns=st.st_ctime_ns)
 
     def _drive_listing(self, stored_dir: str) -> set[str]:
         try:
@@ -320,6 +321,22 @@ class Scanner:
         elif _meta_differs(prev, e) or prev.mtime_ns != e.mtime_ns:
             self.plan.actions.append(Action("record", e))
 
+    def _same_content(self, prev: Entry, e: Entry, src: str) -> bool:
+        """Size and modification time match. If the change time differs too, a program may have
+        edited the file and put its modification time back: compare the actual content."""
+        if not prev.ctime_ns or prev.ctime_ns == e.ctime_ns:
+            return True
+        if not prev.sha256:
+            return False
+        h = hashlib.sha256()
+        try:
+            with open(src, "rb") as f:
+                while buf := f.read(CHUNK):
+                    h.update(buf)
+        except OSError:
+            return True  # can't read it now: keep what is backed up (the copy step reports problems)
+        return h.hexdigest() == prev.sha256
+
     def _plan_file(self, prev: Entry | None, e: Entry, src: str, st: os.stat_result, exists: bool) -> None:
         p = self.plan
         p.scanned_files += 1
@@ -329,10 +346,11 @@ class Scanner:
         stats = p.folders.setdefault(top, [0, 0])
         stats[0] += 1
         stats[1] += e.size
-        if prev is not None and exists and prev.size == e.size and prev.mtime_ns == e.mtime_ns:
+        if prev is not None and exists and prev.size == e.size and prev.mtime_ns == e.mtime_ns \
+                and self._same_content(prev, e, src):
             p.unchanged_files += 1
             p.unchanged_bytes += e.size
-            if _meta_differs(prev, e):
+            if _meta_differs(prev, e) or prev.ctime_ns != e.ctime_ns:
                 e.sha256 = prev.sha256
                 p.actions.append(Action("record", e))
             return
@@ -467,25 +485,20 @@ class Scanner:
                     fresh.append(name)
             need_listing = self.check_drive or any(current[n][2] != "l" for n in fresh)
             on_drive = self._drive_listing(S) if need_listing else None
-            tracked = {self.policy.fold(_basename(s)) for s in stored_of.values() if s}
-            # Names on the drive the manifest doesn't know: leftovers of an interrupted run (copied but
-            # not yet recorded). They are moved to _removed/ rather than kept forever as untracked twins.
-            strays = {self.policy.fold(n): n for n in on_drive or ()}
-            for k in list(strays):
-                if k in tracked or k in freed:
-                    del strays[k]
-            used = tracked | set(strays)  # names taken in this folder (choose() adds to it)
+            # Every name the manifest knows in this folder (also items outside a partial backup's scope).
+            known = {self.policy.fold(_basename(pe.stored)) for pe in prev.values() if pe.stored}
+            # Anything else on the drive here is a leftover of an interrupted run (copied but not yet
+            # recorded): move it to _removed/ instead of keeping untracked twins next to the real copy.
+            for actual in sorted(on_drive or ()):
+                if self.policy.fold(actual) not in known:
+                    self.plan.removals.append(Action("remove", Entry(path=f"{L}/\0stray/{actual}",
+                                                                     stored=f"{S}/{actual}", kind="x")))
+                    self.plan.removed_items += 1
+            used = known - freed  # names that stay taken (choose() adds the new ones)
             for name in sorted(fresh):
                 if current[name][2] == "l":
                     stored_of[name] = ""
                     continue
-                key = self.policy.fold(self.policy.encode(name))
-                if key in strays:
-                    stray = strays.pop(key)
-                    used.discard(key)
-                    self.plan.removals.append(Action("remove", Entry(path=f"{L}/\0stray/{stray}",
-                                                                     stored=f"{S}/{stray}", kind="x")))
-                    self.plan.removed_items += 1
                 stored_of[name] = f"{S}/{self.policy.choose(name, used)}"
 
             subdirs = []
@@ -548,14 +561,23 @@ class Executor:
         self.log.warning(msg)
 
     def _move_to_removed(self, stored: str) -> None:
+        """Move a drive item to _removed/<run>/<same path>. Never replaces anything already there: if
+        the place is taken (or a file sits where a folder is needed), use '<run> (2)' and so on."""
         src = self.t.root / stored
-        dst = self.removed_dir / stored
-        dst.parent.mkdir(parents=True, exist_ok=True)
-        n = 2
-        while os.path.lexists(dst):
-            dst = dst.with_name(f"{(self.removed_dir / stored).name} ({n})")
-            n += 1
-        os.rename(src, dst)
+        n = 1
+        while True:
+            base = self.removed_dir if n == 1 else self.removed_dir.with_name(f"{self.stamp} ({n})")
+            dst = base / stored
+            try:
+                dst.parent.mkdir(parents=True, exist_ok=True)
+            except (FileExistsError, NotADirectoryError):
+                n += 1
+                continue
+            if os.path.lexists(dst):
+                n += 1
+                continue
+            os.rename(src, dst)
+            return
 
     def run(self) -> None:
         shutil.rmtree(self.t.staging_dir, ignore_errors=True)
@@ -641,13 +663,17 @@ class Executor:
             self.progress.bytes_done += planned - copied
             return
 
-        if after.st_size != e.size or after.st_mtime_ns != e.mtime_ns:
+        if after.st_size != e.size or after.st_mtime_ns != e.mtime_ns or after.st_ctime_ns != e.ctime_ns:
             self._warn(f"{e.path}: changed while it was being copied; it will be copied again next time.")
             e.mtime_ns = -1
             e.size = copied
         self.progress.bytes_done += planned - copied  # keep the total consistent if the size changed
         dest.parent.mkdir(parents=True, exist_ok=True)
         if os.path.lexists(dest):
+            # If we are interrupted between moving the old copy away and putting the new one in
+            # place, the next backup must copy this file again: record that first.
+            self.m.mark_for_recopy(e.path)
+            self.m.commit()
             if a.replace and not self.keep_overwritten:
                 os.remove(dest) if not dest.is_dir() else shutil.rmtree(dest)
             else:

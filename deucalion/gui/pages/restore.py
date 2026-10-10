@@ -5,7 +5,7 @@ from __future__ import annotations
 import threading
 from pathlib import Path
 
-from ..common import (Adw, Gio, GLib, Gtk, alert, button, clamp, clear, hbox, label, on_main, open_folder,
+from ..common import (Adw, Gio, GLib, Gtk, alert, button, clamp, clear, hbox, label, on_main, open_folder, safe,
                       page_with_header, run_async, scrolled, toast, vbox)
 from ...manifest import Entry
 from ...restore import Restorer
@@ -158,7 +158,7 @@ class RestorePage:
         if show_path:
             sub = f"{e.parent} · {sub}"
         title = {"home": "Home folder", "system": "System settings"}.get(e.path, e.name)
-        r = Adw.ActionRow(title=GLib.markup_escape_text(title), subtitle=GLib.markup_escape_text(sub))
+        r = Adw.ActionRow(title=GLib.markup_escape_text(safe(title)), subtitle=GLib.markup_escape_text(safe(sub)))
         check = Gtk.CheckButton(active=e.path in self.selected or self._inside_selected(e.path),
                                 valign=Gtk.Align.CENTER)
         check.connect("toggled", lambda c, p=e.path: self._toggle(p, c.get_active()))
@@ -236,7 +236,7 @@ class RestorePage:
             lb = Gtk.ListBox(selection_mode=Gtk.SelectionMode.NONE)
             lb.add_css_class("boxed-list")
             for it in plan.of("overwrite")[:200]:
-                lb.append(Adw.ActionRow(title=GLib.markup_escape_text(str(it.dest))))
+                lb.append(Adw.ActionRow(title=GLib.markup_escape_text(safe(str(it.dest)))))
             extra = Gtk.ScrolledWindow(min_content_height=160, max_content_height=260, child=lb)
         if plan.count("missing"):
             body += f"\n\n{plan.count('missing'):,} files are missing on the drive and can't be restored."
@@ -284,7 +284,7 @@ class RestorePage:
         if res.warnings:
             g = Adw.PreferencesGroup(title="Warnings")
             for w in res.warnings[:50]:
-                g.add(Adw.ActionRow(title=GLib.markup_escape_text(w)))
+                g.add(Adw.ActionRow(title=GLib.markup_escape_text(safe(w))))
             self.done_box.append(clamp(g, 700))
         self.stack.set_visible_child_name("done")
 

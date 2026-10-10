@@ -37,7 +37,8 @@ CREATE TABLE IF NOT EXISTS entries (
     size     INTEGER,
     mtime_ns INTEGER,
     link     BLOB,
-    sha256   TEXT
+    sha256   TEXT,
+    ctime_ns INTEGER DEFAULT 0
 );
 CREATE INDEX IF NOT EXISTS entries_parent ON entries(parent);
 CREATE TABLE IF NOT EXISTS runs (
@@ -50,6 +51,11 @@ CREATE TABLE IF NOT EXISTS runs (
     stats    TEXT
 );
 """
+
+
+def printable(s: str) -> str:
+    """A name with bytes that are not valid UTF-8 shown with escapes (for messages and logs)."""
+    return s.encode("utf-8", "backslashreplace").decode("utf-8")
 
 
 def _b(s: str) -> bytes:
@@ -74,6 +80,7 @@ class Entry:
     mtime_ns: int = 0
     link: str | None = None
     sha256: str | None = None
+    ctime_ns: int = 0          # change time: changes on any write, can't be set back by programs
 
     @property
     def name(self) -> str:
@@ -84,11 +91,11 @@ class Entry:
         return self.path.rsplit("/", 1)[0] if "/" in self.path else ""
 
 
-_COLS = "path, stored, kind, mode, uid, gid, owner, grp, size, mtime_ns, link, sha256"
+_COLS = "path, stored, kind, mode, uid, gid, owner, grp, size, mtime_ns, link, sha256, ctime_ns"
 
 
 def _row_to_entry(r) -> Entry:
-    return Entry(_s(r[0]), _s(r[1]), r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], _s(r[10]), r[11])
+    return Entry(_s(r[0]), _s(r[1]), r[2], r[3], r[4], r[5], r[6], r[7], r[8], r[9], _s(r[10]), r[11], r[12] or 0)
 
 
 def _subtree_bounds(path: str) -> tuple[bytes, bytes]:
@@ -104,6 +111,9 @@ class Manifest:
         self.db.execute("PRAGMA synchronous=FULL")  # survives a yanked USB drive
         self.db.execute("PRAGMA cache_size=-131072")  # 128 MB: fewer reads from slow USB drives
         self.db.executescript(_SCHEMA)
+        cols = {r[1] for r in self.db.execute("PRAGMA table_info(entries)")}
+        if "ctime_ns" not in cols:  # manifests from version 0.1.0
+            self.db.execute("ALTER TABLE entries ADD COLUMN ctime_ns INTEGER DEFAULT 0")
         if self.get_meta("schema") is None:
             self.set_meta("schema", str(SCHEMA_VERSION))
         self.db.commit()
@@ -119,10 +129,11 @@ class Manifest:
         self.db.execute("INSERT OR REPLACE INTO meta VALUES (?, ?)", (key, value))
 
     def set_source(self, name: str, origin: str, kind: str) -> None:
-        self.db.execute("INSERT OR REPLACE INTO sources VALUES (?, ?, ?)", (name, origin, kind))
+        self.db.execute("INSERT OR REPLACE INTO sources VALUES (?, ?, ?)", (name, _b(origin), kind))
 
     def sources(self) -> dict[str, tuple[str, str]]:
-        return {n: (o, k) for n, o, k in self.db.execute("SELECT name, origin, kind FROM sources")}
+        return {n: (os.fsdecode(o) if isinstance(o, bytes) else o, k)
+                for n, o, k in self.db.execute("SELECT name, origin, kind FROM sources")}
 
     # -- entries ----------------------------------------------------------------
     def get(self, path: str) -> Entry | None:
@@ -139,9 +150,9 @@ class Manifest:
 
     def put(self, e: Entry) -> None:
         self.db.execute(
-            f"INSERT OR REPLACE INTO entries (parent, {_COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?)",
+            f"INSERT OR REPLACE INTO entries (parent, {_COLS}) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (_b(e.parent), _b(e.path), _b(e.stored), e.kind, e.mode, e.uid, e.gid, e.owner, e.grp,
-             e.size, e.mtime_ns, None if e.link is None else _b(e.link), e.sha256),
+             e.size, e.mtime_ns, None if e.link is None else _b(e.link), e.sha256, e.ctime_ns),
         )
         self._tick()
 
@@ -195,7 +206,7 @@ class Manifest:
     # -- runs ---------------------------------------------------------------------
     def start_run(self, kind: str, started: str, scope: str) -> int:
         cur = self.db.execute("INSERT INTO runs (kind, started, status, scope) VALUES (?,?,?,?)",
-                              (kind, started, "running", scope))
+                              (kind, started, "running", printable(scope)))
         self.commit()
         return cur.lastrowid
 

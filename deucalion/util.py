@@ -56,7 +56,7 @@ def run(cmd: list[str], check: bool = False, timeout: float | None = 60) -> subp
 def write_json_atomic(path: Path, data) -> None:
     tmp = path.with_name(path.name + ".tmp")
     with open(tmp, "w", encoding="utf-8") as f:
-        json.dump(data, f, indent=2, ensure_ascii=False)
+        json.dump(data, f, indent=2, ensure_ascii=True)  # also safe for names that aren't valid UTF-8
         f.write("\n")
         f.flush()
         os.fsync(f.fileno())
