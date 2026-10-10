@@ -66,6 +66,11 @@ class Privileged:
             self.proc.wait()
             self.proc = None
             raise DeucalionError("Administrator access was not granted.")
+        from .helper import HELPER_VERSION
+        if ready.get("version") != HELPER_VERSION:
+            self.close()
+            raise DeucalionError("The installed administrator helper is out of date. Update it with: "
+                                 "./install.sh --system-helper (from the Deucalion folder)")
 
     def call(self, op: str, on_progress: Callable[[str], None] | None = None, **args):
         self.start()

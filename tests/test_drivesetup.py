@@ -15,7 +15,7 @@ from deucalion import drivesetup
 from deucalion.config import Config
 from deucalion.drivesetup import SetupRequest, label_for, missing_requirements, readme_text
 from deucalion.target import Target
-from deucalion.util import DeucalionError
+from deucalion.util import DeucalionError, read_json as json_load
 
 
 class PureTest(unittest.TestCase):
@@ -97,6 +97,47 @@ class LuksImageTest(unittest.TestCase):
         self.ds.open(access, "correct horse battery")
         self.assertEqual(Target.find(self.cfg, "T1").root.joinpath("probe").read_text(), "x")
         self.ds.close_access(access)
+
+    def _backup_restore_roundtrip(self, target):
+        from deucalion.backup import BackupJob
+        from deucalion.restore import Restorer
+        home = self.tmp / "h"
+        (home / "Docs").mkdir(parents=True)
+        (home / "Docs" / "a:b?.txt").write_text("hello")
+        (home / "Docs" / "Notes").write_text("1")
+        (home / "Docs" / "notes").write_text("2")
+        self.cfg["home_path"] = str(home)
+        job = BackupJob(self.cfg, target)
+        try:
+            self.assertEqual(job.execute(job.scan()).status, "completed")
+        finally:
+            job.close()
+        out = self.tmp / "out"
+        m = target.manifest()
+        try:
+            r = Restorer(self.cfg, target, m)
+            r.execute(r.plan(["home"], to=out))
+        finally:
+            m.close()
+        self.assertEqual(sorted(os.listdir(out / "h" / "Docs")), ["Notes", "a:b?.txt", "notes"])
+
+    def test_plain_exfat_layout(self):
+        t = self.ds.run(SetupRequest("plain", device=self.disk, name="PlainEx", allow_internal=True))
+        self.assertEqual(t.policy.kind, "exfat")
+        self.assertTrue((t.root.parent / "READ-ME-FIRST.txt").exists())
+        self._backup_restore_roundtrip(t)
+        self.ds.release(self.disk)
+
+    def test_encrypted_part_plus_normal_part_luks(self):
+        t = self.ds.run(SetupRequest("encrypt-part", device=self.disk, method="luks", name="Split",
+                                     size=64 * 1024 ** 2, passphrase="correct horse battery", allow_internal=True))
+        access = self.cfg["targets"][t.id]["access"]
+        plain = drivesetup.plain_root_of(self.cfg, t)
+        self.assertTrue((plain / "Deucalion-Tool" / "bin" / "deucalion").exists())
+        self.assertEqual(json_load(plain / "Deucalion-Tool" / "drive.json")["partuuid"], access["partuuid"])
+        self._backup_restore_roundtrip(t)
+        self.ds.close_access(access)
+        self.ds.release(self.disk)
 
     def test_encrypt_folder_luks_close_detaches(self):
         disk_obj = self.ds.u.resolve(self.disk)

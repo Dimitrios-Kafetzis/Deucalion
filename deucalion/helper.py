@@ -26,6 +26,7 @@ import subprocess
 import sys
 import time
 
+HELPER_VERSION = 3  # bump when operations or their arguments change
 ETC = "/etc"
 DPKG_INFO = "/var/lib/dpkg/info"
 DPKG_STATUS = "/var/lib/dpkg/status"
@@ -737,7 +738,7 @@ def serve() -> int:
         out.flush()
 
     os.umask(0o022)
-    send({"ready": True, "uid": os.geteuid()})
+    send({"ready": True, "uid": os.geteuid(), "version": HELPER_VERSION})
     for line in sys.stdin:
         try:
             req = json.loads(line)
