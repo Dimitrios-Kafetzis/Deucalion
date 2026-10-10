@@ -24,6 +24,7 @@ VERACRYPT_FINGERPRINT = "5069A233D55A0EEB174A5FC3821ACD02680D16DE"   # VeraCrypt
 VERACRYPT_KEY_URLS = ["https://amcrypto.jp/VeraCrypt/VeraCrypt_PGP_public_key.asc",
                       "https://www.idrix.fr/VeraCrypt/VeraCrypt_PGP_public_key.asc"]
 VERACRYPT_RELEASES = "https://api.github.com/repos/veracrypt/VeraCrypt/releases/latest"
+VERACRYPT_MIN_VERSION = (1, 26, 29)   # never install an older (possibly vulnerable) release
 
 
 @dataclass
@@ -134,6 +135,11 @@ def verify_signature(deb: Path, sig: Path, key: Path, workdir: Path) -> None:
     subprocess.run(["gpg", "--batch", "--quiet", "--import", str(key)], env=env, capture_output=True)
     r = subprocess.run(["gpg", "--batch", "--status-fd", "1", "--verify", str(sig), str(deb)],
                        env=env, capture_output=True, text=True)
+    status = {line.split()[1] for line in r.stdout.splitlines() if len(line.split()) > 1}
+    if r.returncode != 0 or "GOODSIG" not in status or status & {"REVKEYSIG", "EXPKEYSIG", "EXPSIG", "KEYREVOKED",
+                                                                 "BADSIG", "ERRSIG"}:
+        raise DeucalionError("The VeraCrypt download could not be verified (bad, expired or revoked signature). "
+                             "Nothing was installed.")
     for line in r.stdout.splitlines():
         parts = line.split()
         # [GNUPG:] VALIDSIG <sig-key-fpr> <date> <ts> <exp> <ver> <res> <pk-algo> <hash-algo> <class> <primary-fpr>
@@ -154,6 +160,9 @@ def install_veracrypt(out=print) -> None:
     release = json.loads(_get(VERACRYPT_RELEASES))
     assets = {a["name"]: a["browser_download_url"] for a in release.get("assets", [])}
     name = choose_veracrypt_asset(list(assets), osr.get("VERSION_ID", ""), arch)
+    m = re.match(r"^veracrypt-(\d+)\.(\d+)\.(\d+)-", name or "")
+    if name and (not m or tuple(int(x) for x in m.groups()) < VERACRYPT_MIN_VERSION):
+        raise DeucalionError(f"The VeraCrypt release offered ({name}) is older than expected; nothing was installed.")
     if not name or name + ".sig" not in assets:
         raise DeucalionError(f"No VeraCrypt package for Ubuntu {osr.get('VERSION_ID')} ({arch}).")
     if not assets[name].startswith("https://github.com/veracrypt/VeraCrypt/releases/download/"):

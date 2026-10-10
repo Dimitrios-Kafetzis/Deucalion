@@ -362,8 +362,8 @@ def op_apt_add_source(emit, filename: str, content: str, keys: list[dict]) -> di
             f.write(data)
         os.chmod(path, 0o644)
         added_keys.append(path)
-    if not filename.startswith("deucalion-"):
-        raise OpError("Deucalion only adds its own deucalion-* source files")
+    if filename in ("ubuntu.sources", "sources.list") or filename.startswith("ubuntu-esm"):
+        raise OpError("the system's own source files are never changed")
     dest = os.path.join("/etc/apt/sources.list.d", filename)
     if os.path.lexists(dest):
         raise OpError(f"{dest} already exists; it was left unchanged")
@@ -437,11 +437,18 @@ def op_put_etc_file(emit, src: str, dest: str, mode: int, undo_dir: str, owner: 
         gid = 0
     tmp = _unique(dest + ".deucalion-tmp")
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_EXCL | os.O_NOFOLLOW, 0o600)
-    with os.fdopen(fd, "wb") as f, open(src, "rb") as fi:
-        shutil.copyfileobj(fi, f)
-    os.chown(tmp, uid, gid)
-    os.chmod(tmp, int(mode) & 0o7777)
-    os.replace(tmp, dest)
+    try:
+        with os.fdopen(fd, "wb") as f, open(src, "rb") as fi:
+            shutil.copyfileobj(fi, f)
+        os.chown(tmp, uid, gid)
+        os.chmod(tmp, int(mode) & 0o7777)
+        os.replace(tmp, dest)
+    except BaseException:
+        try:
+            os.unlink(tmp)
+        except OSError:
+            pass
+        raise
     return {"dest": dest, "kept": aside}
 
 
@@ -646,7 +653,7 @@ def op_veracrypt_create(emit, source: str, passphrase: str, label: str, uid: int
     try:
         mapper = _vc_open(device, name, passphrase, emit)
         emit("Creating the exFAT filesystem inside")
-        _out(["mkfs.exfat", "-L", label, mapper])
+        _out(["mkfs.exfat", "-c", "8K", "-L", label, mapper])
     finally:
         subprocess.run(["cryptsetup", "close", name], capture_output=True)
         if loop:
@@ -742,6 +749,8 @@ def serve() -> int:
         out.flush()
 
     os.umask(0o022)
+    import signal
+    signal.signal(signal.SIGINT, signal.SIG_IGN)  # Ctrl+C in the terminal must not cut apt/dpkg off
     with open(os.path.abspath(__file__), "rb") as f:
         me = hashlib.sha256(f.read()).hexdigest()
     send({"ready": True, "uid": os.geteuid(), "version": HELPER_VERSION, "sha256": me})

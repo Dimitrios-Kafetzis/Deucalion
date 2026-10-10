@@ -36,9 +36,11 @@ from . import __version__
 from .config import INTERNAL_HOME_EXCLUDES, Config, Excluder, state_dir
 from .manifest import Entry, Manifest
 from .target import Target
-from .util import DeucalionError, human_size, now_iso, os_release, run_stamp
+from .util import DRIVE_FULL, DeucalionError, human_size, now_iso, os_release, run_stamp
 
 ALL = "ALL"  # scope marker: the whole subtree
+OS_CLUTTER = {".DS_Store", "Thumbs.db", "desktop.ini", ".Spotlight-V100", ".Trashes", ".fseventsd",
+              "System Volume Information", "$RECYCLE.BIN"}
 CHUNK = 4 * 1024 * 1024
 SPARSE_MIN = 64 * 1024 * 1024
 SPACE_MARGIN = 256 * 1024 * 1024
@@ -211,6 +213,7 @@ class Plan:
     changed_bytes: int = 0
     copy_files: int = 0
     copy_bytes: int = 0
+    copy_alloc: int = 0       # space the copies take on the drive (whole clusters), plus new folders
     unchanged_files: int = 0
     unchanged_bytes: int = 0
     removed_items: int = 0
@@ -282,6 +285,10 @@ class Scanner:
         st = os.stat(target.root)
         self._target_ident = (st.st_dev, st.st_ino)
         self.plan = Plan(actions=ActionStore(sources))
+        try:
+            self.cluster = max(os.statvfs(target.root).f_frsize, 512)  # the drive's allocation unit
+        except OSError:
+            self.cluster = 4096
         self._src_name = ""
 
     # -- helpers ---------------------------------------------------------------------------
@@ -318,6 +325,7 @@ class Scanner:
     def _plan_dir(self, prev: Entry | None, e: Entry, exists: bool) -> None:
         if prev is None or not exists:
             self.plan.actions.append(Action("mkdir", e))
+            self.plan.copy_alloc += self.cluster
         elif _meta_differs(prev, e) or prev.mtime_ns != e.mtime_ns:
             self.plan.actions.append(Action("record", e))
 
@@ -358,6 +366,7 @@ class Scanner:
         p.actions.append(Action("copy", e, src=src, replace=replace))
         p.copy_files += 1
         p.copy_bytes += e.size
+        p.copy_alloc += -(-e.size // self.cluster) * self.cluster
         if replace:
             p.changed_files += 1
             p.changed_bytes += e.size
@@ -490,6 +499,8 @@ class Scanner:
             # Anything else on the drive here is a leftover of an interrupted run (copied but not yet
             # recorded): move it to _removed/ instead of keeping untracked twins next to the real copy.
             for actual in sorted(on_drive or ()):
+                if actual in OS_CLUTTER or actual.startswith("._"):
+                    continue  # left by macOS/Windows when the drive was browsed there
                 if self.policy.fold(actual) not in known:
                     self.plan.removals.append(Action("remove", Entry(path=f"{L}/\0stray/{actual}",
                                                                      stored=f"{S}/{actual}", kind="x")))
@@ -564,8 +575,13 @@ class Executor:
         """Move a drive item to _removed/<run>/<same path>. Never replaces anything already there: if
         the place is taken (or a file sits where a folder is needed), use '<run> (2)' and so on."""
         src = self.t.root / stored
+        root = self.t.removed_root
+        if os.path.lexists(root) and (root.is_symlink() or not root.is_dir()):
+            raise DeucalionError(f"{root} should be a folder but is not. Rename it, then run the backup again.")
         n = 1
         while True:
+            if n > 1000:
+                raise DeucalionError(f"Could not find a free place in {root} for {stored}.")
             base = self.removed_dir if n == 1 else self.removed_dir.with_name(f"{self.stamp} ({n})")
             dst = base / stored
             try:
@@ -586,6 +602,13 @@ class Executor:
             for a in self.plan.removals:
                 self._check_cancel()
                 self._remove(a)
+            # Files about to be replaced are first marked "copy again": if the run is interrupted
+            # between moving an old copy away and putting the new one in place, the next backup
+            # repairs it. Each successful copy records the file properly again.
+            for a in self.plan.actions:
+                if a.op == "copy" and a.replace:
+                    self.m.mark_for_recopy(a.entry.path)
+            self.m.commit()
             for a in self.plan.actions:
                 self._check_cancel()
                 if a.op == "copy":
@@ -611,7 +634,7 @@ class Executor:
             self._move_to_removed(e.stored)
         self.m.delete_tree(e.path)
         self.removed_items += 1
-        self.log.info("moved to _removed: %s", e.path)
+        self.log.info("moved to _removed: %s", e.stored if e.kind == "x" else e.path)
 
     def _mkdir(self, e: Entry) -> None:
         d = self.t.root / e.stored
@@ -654,8 +677,7 @@ class Executor:
         except OSError as err:
             tmp.unlink(missing_ok=True)
             if err.errno == errno.ENOSPC:
-                raise DeucalionError("The backup drive is full. Free some space (for example "
-                                     "empty _removed/ with: deucalion removed empty) and run again.") from None
+                raise DeucalionError(DRIVE_FULL) from None
             if err.errno == errno.ENOENT and err.filename == a.src:
                 self.log.info("vanished before copy: %s", e.path)
             else:
@@ -670,10 +692,6 @@ class Executor:
         self.progress.bytes_done += planned - copied  # keep the total consistent if the size changed
         dest.parent.mkdir(parents=True, exist_ok=True)
         if os.path.lexists(dest):
-            # If we are interrupted between moving the old copy away and putting the new one in
-            # place, the next backup must copy this file again: record that first.
-            self.m.mark_for_recopy(e.path)
-            self.m.commit()
             if a.replace and not self.keep_overwritten:
                 os.remove(dest) if not dest.is_dir() else shutil.rmtree(dest)
             else:
@@ -749,7 +767,7 @@ class BackupJob:
 
     def space_problem(self, plan: Plan) -> str | None:
         total = shutil.disk_usage(self.target.root).total
-        needed = plan.copy_bytes + max(16 * 1024**2, min(SPACE_MARGIN, total // 50))
+        needed = max(plan.copy_alloc, plan.copy_bytes) + max(16 * 1024**2, min(SPACE_MARGIN, total // 50))
         if not self.cfg.get("keep_overwritten", True):
             needed -= plan.replaced_bytes
         free = self.target.free_bytes()
@@ -783,11 +801,17 @@ class BackupJob:
         m = self.manifest
         started = now_iso()
         t0 = time.monotonic()
-        for s in self.sources:
-            if s.name in self.scope:
-                m.set_source(s.name, str(s.origin), s.kind)
-        m.set_meta("name_policy", self.target.policy.kind)
-        run_id = m.start_run(plan.kind, started, plan.scope_text)
+        try:
+            for s in self.sources:
+                if s.name in self.scope:
+                    m.set_source(s.name, str(s.origin), s.kind)
+            m.set_meta("name_policy", self.target.policy.kind)
+            run_id = m.start_run(plan.kind, started, plan.scope_text)
+        except sqlite3.OperationalError as e:
+            m.db.rollback()
+            msg = DRIVE_FULL if "full" in str(e) else f"The backup's records could not be written: {e}"
+            return RunResult("failed", plan.kind, started, now_iso(), time.monotonic() - t0, 0, 0, 0,
+                             list(plan.warnings), plan.skipped, msg)
         ex = Executor(self.target, m, plan, self.cfg.get("keep_overwritten", True),
                       self.on_progress, self.cancel, self.log)
         status, error = "completed", None
@@ -797,6 +821,9 @@ class BackupJob:
             status = "cancelled"
         except DeucalionError as e:
             status, error = "failed", str(e)
+        except sqlite3.OperationalError as e:
+            m.db.rollback()
+            status, error = "failed", DRIVE_FULL if "full" in str(e) else f"The backup's records could not be written: {e}"
         except Exception as e:  # unexpected: record it in the run history and the log
             status, error = "failed", f"{type(e).__name__}: {e}"
             self.log.exception("backup failed")
@@ -807,13 +834,19 @@ class BackupJob:
                            ex.copied_files, ex.copied_bytes, ex.removed_items, warnings, plan.skipped, error)
         stats = {k: getattr(result, k) for k in ("copied_files", "copied_bytes", "removed_items")}
         stats["warnings"] = len(warnings)
-        m.finish_run(run_id, result.finished, status, json.dumps(stats))
+        try:
+            m.finish_run(run_id, result.finished, status, json.dumps(stats))
+        except sqlite3.OperationalError:
+            m.db.rollback()  # e.g. the drive is completely full; the result is still reported
         if status.startswith("completed"):
             try:
                 m.snapshot()
             except (OSError, sqlite3.Error) as e:
                 self.log.warning("could not save a copy of the manifest: %s", e)
-        self._write_summary(result)
+        try:
+            self._write_summary(result)
+        except OSError as e:
+            self.log.warning("could not write backup.json: %s", e)
         return result
 
     def _write_summary(self, r: RunResult) -> None:

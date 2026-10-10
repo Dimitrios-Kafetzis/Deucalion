@@ -39,12 +39,16 @@ class Repo:
 
     @property
     def is_ubuntu_mirror(self) -> bool:
-        """A local mirror of Ubuntu's archive (e.g. http://ftp.cc.uoc.gr/mirrors/linux/ubuntu/packages/)."""
-        uri = (self.uris[0] if self.uris else "").rstrip("/")
-        ubuntu_path = "/ubuntu" in uri.lower() or uri.lower().endswith("/ubuntu-ports")
-        ubuntu_key = "ubuntu-archive-keyring" in (self.signed_by or "")
-        ubuntu_parts = bool(set(self.components) & {"main", "restricted", "universe", "multiverse"})
-        return ubuntu_key or (ubuntu_path and ubuntu_parts)
+        """A mirror of Ubuntu's own archive (e.g. http://ftp.example.org/ubuntu/ with noble,
+        noble-updates, noble-security). Third-party repositories that merely have 'ubuntu' in their
+        address (Wine, ROS, Microsoft…) don't have the -updates/-security suites."""
+        if "ubuntu-archive-keyring" in (self.signed_by or ""):
+            return True
+        uri = (self.uris[0] if self.uris else "").rstrip("/").lower()
+        archive_path = uri.endswith("/ubuntu") or uri.endswith("/ubuntu-ports")
+        archive_suites = any(re.fullmatch(r"[a-z]+-(updates|security|backports|proposed)", s) for s in self.suites)
+        ubuntu_parts = bool(self.components) and set(self.components) <= {"main", "restricted", "universe", "multiverse"}
+        return archive_path and archive_suites and ubuntu_parts
 
     @property
     def label(self) -> str:

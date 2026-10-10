@@ -65,6 +65,10 @@ cp "$SRC/data/icons/hicolor/symbolic/apps/$APP_ID-symbolic.svg" "$DATA/icons/hic
 command -v update-desktop-database >/dev/null && update-desktop-database "$DATA/applications" 2>/dev/null || true
 command -v gtk4-update-icon-cache >/dev/null && gtk4-update-icon-cache -q -t "$DATA/icons/hicolor" 2>/dev/null || true
 
+if [[ -e "$HELPER_DIR/helper.py" ]] && ! cmp -s "$SRC/deucalion/helper.py" "$HELPER_DIR/helper.py"; then
+    echo "The installed administrator helper is from another version; updating it too."
+    SYSTEM_HELPER=1
+fi
 if [[ $SYSTEM_HELPER == 1 ]]; then
     echo "Installing the administrator helper (asks for your password)…"
     as_admin sh -c "install -d -m 0755 -o root -g root '$HELPER_DIR' && \

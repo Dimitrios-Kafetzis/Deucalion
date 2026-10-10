@@ -229,13 +229,14 @@ class Restorer:
             self.log.info("moved aside: %s -> %s", path, aside)
             return aside
 
+        replaced_dirs: list[str] = []   # e.g. a link to a folder that was set aside: restore what was "inside"
         status = "completed"
         try:
             for item in plan.items:
                 if self.cancel.is_set():
                     raise Cancelled()
                 e, dest = item.entry, item.dest
-                if item.op == "same":
+                if item.op == "same" and not any(str(dest).startswith(m + "/") for m in replaced_dirs):
                     continue
                 if item.op == "missing":
                     warnings.append(f"{e.path}: missing on the drive; not restored.")
@@ -249,6 +250,8 @@ class Restorer:
                     if os.path.lexists(dest) and not (e.kind == "d" and is_dir_now):
                         aside = move_aside(dest)
                         moved = True
+                        if e.kind == "d":
+                            replaced_dirs.append(str(dest))
                     dest.parent.mkdir(parents=True, exist_ok=True)
                     if e.kind == "d":
                         dest.mkdir(exist_ok=True)

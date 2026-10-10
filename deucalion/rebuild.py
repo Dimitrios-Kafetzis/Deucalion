@@ -140,14 +140,17 @@ class Context:
     def undo_dir(self, what: str) -> Path:
         """A new, empty folder for the originals changed by one step run (never reused)."""
         base = Path(self.new_home) / UNDO_DIRNAME
+        if os.path.lexists(base) and (base.is_symlink() or not base.is_dir()):
+            raise DeucalionError(f"{base} should be a folder but is not; nothing was changed.")
         n = 1
-        while True:
+        while n < 1000:
             d = base / f"{run_stamp()}-{what}" if n == 1 else base / f"{run_stamp()}-{what}-{n}"
             try:
                 d.mkdir(parents=True)
                 return d
             except FileExistsError:
                 n += 1
+        raise DeucalionError(f"Could not create a new folder in {base}.")
 
     def priv(self) -> Privileged:
         if self._priv is None:
@@ -262,7 +265,7 @@ class ReposStep(Step):
                 detail += f"  (hardware-specific: {old_model or 'other model'})"
                 selected = selected and bool(same)
             p.items.append(Item(name, r0.label, detail, selected, True,
-                                {"file": "deucalion-" + (name if name != "sources.list" else "restored.list"),
+                                {"file": name if name != "sources.list" else "deucalion-restored.list",
                                  "content": content, "keys": keys}))
         return p
 
@@ -559,7 +562,8 @@ class DesktopStep(Step):
             return ["The current desktop settings could not be saved first, so nothing was changed."]
         keep = ctx.undo_dir("desktop") / "dconf-before.ini"
         keep.write_text(current.stdout)
-        out(f"Your current desktop settings are saved in {keep} (undo: dconf load / < that file)")
+        out(f"Your current desktop settings are saved in {keep} "
+            f"(to go back: dconf reset -f / && dconf load / < {keep})")
         res = subprocess.run(["dconf", "load", "/"], input=text, text=True, capture_output=True)
         if res.returncode != 0:
             return [f"Desktop settings could not be loaded: {res.stderr.strip()}"]

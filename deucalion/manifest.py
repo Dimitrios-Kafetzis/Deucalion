@@ -107,6 +107,16 @@ class Manifest:
     def __init__(self, path: Path):
         self.path = path
         self.db = sqlite3.connect(str(path), isolation_level="DEFERRED", check_same_thread=False)
+        try:
+            self._setup()
+        except sqlite3.OperationalError as e:
+            self.db.close()
+            from .util import DRIVE_FULL, DeucalionError
+            raise DeucalionError(DRIVE_FULL if "full" in str(e) else f"The backup's records can't be opened: {e}") from None
+        self._last_commit = time.monotonic()
+        self._pending = 0
+
+    def _setup(self) -> None:
         self.db.execute("PRAGMA journal_mode=DELETE")
         self.db.execute("PRAGMA synchronous=FULL")  # survives a yanked USB drive
         self.db.execute("PRAGMA cache_size=-131072")  # 128 MB: fewer reads from slow USB drives
@@ -117,8 +127,6 @@ class Manifest:
         if self.get_meta("schema") is None:
             self.set_meta("schema", str(SCHEMA_VERSION))
         self.db.commit()
-        self._last_commit = time.monotonic()
-        self._pending = 0
 
     # -- meta / sources -------------------------------------------------------
     def get_meta(self, key: str) -> str | None:

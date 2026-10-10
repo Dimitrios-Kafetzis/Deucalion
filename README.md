@@ -19,16 +19,16 @@ Ubuntu LTS or on a new machine, even with a different username.
 - **Optional encryption.** Encrypt the whole drive, an encrypted part of it, or an encrypted
   folder on it: VeraCrypt (opens on Linux, macOS and Windows) or LUKS (Linux only).
 
-> **Status:** version 0.1, all five milestones built: backup, restore, rebuild, drive setup and
-> encryption, as a GNOME app and from the command line. A few parts still need testing on real
-> hardware with administrator rights; see [docs/PLAN.md](docs/PLAN.md#status).
+> **Status:** version 0.2: backup, restore, rebuild, drive setup and encryption, as a GNOME app and
+> from the command line, after an extensive safety campaign (see *How Deucalion protects your data*).
 
 ## Install
 
 ```bash
 git clone https://github.com/Dimitrios-Kafetzis/Deucalion.git
 cd Deucalion
-./install.sh                    # app menu entry + 'deucalion' command, for your user only
+./install.sh                    # checks/installs what is needed (asks before installing), then
+                                # adds the app menu entry and the 'deucalion' command
 ./install.sh --system-helper    # recommended: also installs the administrator helper system-wide
 ```
 
@@ -43,10 +43,10 @@ You can also run Deucalion without installing it: `bin/deucalion` (from a clone,
 
 ### Requirements
 
-Ubuntu 22.04 or newer (Python 3.10+). Everything else ships with Ubuntu Desktop, except:
-
-- `exfatprogs`: needed to *format* exFAT drives. Deucalion offers to install it.
-- [VeraCrypt](https://www.veracrypt.fr/en/Downloads.html): only for VeraCrypt-encrypted drives.
+Ubuntu 22.04 or newer (Python 3.10+). `./install.sh` (or `deucalion deps --install`) checks
+everything and installs what is missing: the GTK/libadwaita libraries, UDisks, cryptsetup,
+`exfatprogs`, dconf and gnupg. It can also install VeraCrypt (needed only for
+VeraCrypt-encrypted drives), downloading the official package and checking its signature first.
 
 ## Quick start
 
@@ -149,6 +149,47 @@ administrator password. Creating or opening a VeraCrypt volume needs
 [VeraCrypt](https://www.veracrypt.fr/en/Downloads.html) and the administrator password.
 Each prepared drive gets a `READ-ME-FIRST.txt` and a copy of Deucalion on its
 unencrypted part.
+
+## How Deucalion protects your data
+
+- **Backups only read your computer.** Tests compare every file's contents, permissions and
+  change time before and after each backup.
+- **Nothing on the drive is deleted by a backup.** Changed and deleted files go to `_removed/`,
+  and a test checks that every version ever backed up is still on the drive afterwards.
+- **Restores never lose a local file.** Anything replaced is renamed into
+  `~/Deucalion-before-restore/` (never copied-then-deleted). If a restore fails or is stopped,
+  the original is put back. Mount points are never touched.
+- **Rebuilds keep what they replace.**
+  - Desktop settings, crontabs and `/etc` files are saved first.
+  - Packages are never removed (`apt --no-remove`).
+  - Your system's own apt sources are never changed.
+  - Paths are updated only as whole paths.
+  - Running a rebuild twice changes nothing.
+- **Interruptions are safe.** You can kill the process, unplug the drive or let it run full
+  at any moment: the next run repairs the backup, with no duplicates or damage.
+- **Administrator work is narrow.**
+  - It goes through one small helper with a fixed list of checked operations, which refuses to
+    touch the system disk.
+  - The installed copy must match the app's own copy exactly.
+  - VeraCrypt is installed only after its signature is checked against VeraCrypt's pinned key.
+- **Edits that keep the same size and time are still caught.** The change time is checked, and
+  the contents are compared when in doubt.
+
+### How this was tested
+
+- **Unit and integration tests** (`tests/`): on plain folders, real exFAT and LUKS volumes,
+  including regression tests for every issue found in three independent code reviews.
+- **A randomized torture test** (`tests/torture.py`): random trees with awkward names, and
+  backups and restores killed at random moments. Hundreds of runs passed on plain, exFAT and
+  LUKS drives.
+- **Administrator checks** (`tests/manual/admin_checks.py`, `veracrypt_checks.py`):
+  - protected-settings backups, with `/etc` fingerprinted before and after;
+  - a symlink attack on the root helper, and refused malicious requests;
+  - VeraCrypt create, open, wrong password and close in all three layouts.
+- **A full rebuild of a fresh Ubuntu 26.04 virtual machine** from a 24.04 backup, under a
+  different username, run twice (`tests/manual/vm_rebuild_check.py`).
+- **A real-data backup** of about 700,000 files (49 GB): verified, restored and compared
+  byte for byte.
 
 ## Development
 

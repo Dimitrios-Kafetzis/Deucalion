@@ -40,6 +40,9 @@ LAYOUTS = {
 ERASING = {"encrypt-all", "encrypt-part", "plain"}
 CONTAINER = {"veracrypt": "Deucalion-Backup.hc", "luks": "Deucalion-Backup.luks"}
 TOOL_DIRNAME = "Deucalion-Tool"
+# exFAT's default cluster on big drives is 128 KB: each small file then wastes most of it (100+ GB for a
+# home folder with millions of small files). 8 KB clusters keep that small and work on every OS.
+EXFAT_ARGS = ["-c", "8K"]
 README_NAME = "READ-ME-FIRST.txt"
 VERACRYPT_URL = "https://www.veracrypt.fr/en/Downloads.html"
 
@@ -157,7 +160,8 @@ class DriveSetup:
             self.out(f"Erasing {req.device} and creating a new partition table")
             self.u.format(disk, "gpt")
         if req.layout == "plain":
-            part = self.u.create_partition(disk, 0, GPT_DATA, label, fstype="exfat", label=label)
+            part = self.u.create_partition(disk, 0, GPT_DATA, label, fstype="exfat", label=label,
+                                           mkfs_args=EXFAT_ARGS)
             mp = self.u.mount(part)
             return self._finish(req, mp, {"method": "none"}, plain_root=mp)
         if req.layout == "as-is":
@@ -174,7 +178,7 @@ class DriveSetup:
             if not 64 * 1024 ** 2 <= req.size <= size - 128 * 1024 ** 2:
                 raise DeucalionError("Choose a size for the encrypted part that leaves room for the normal part.")
             plain = self.u.create_partition(disk, size - req.size - 4 * 1024 ** 2, GPT_DATA, label,
-                                            fstype="exfat", label=label)
+                                            fstype="exfat", label=label, mkfs_args=EXFAT_ARGS)
             info = self.u.partition_info(plain)
             secret = self.u.create_partition(disk, 0, GPT_LINUX, f"{label} backup",
                                              offset=int(info["Offset"]) + int(info["Size"]))

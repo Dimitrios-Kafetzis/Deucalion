@@ -33,6 +33,8 @@ class UDisks:
             return GLib.Variant("b", value)
         if isinstance(value, int):
             return GLib.Variant("t", value)
+        if isinstance(value, (list, tuple)):
+            return GLib.Variant("as", [str(v) for v in value])
         return GLib.Variant("s", str(value))
 
     def opts(self, **kw) -> dict:

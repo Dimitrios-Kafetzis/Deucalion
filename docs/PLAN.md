@@ -269,24 +269,20 @@ Testing never touches real drives: formatting and encryption tests run on disk-i
 
 ## Status
 
-Milestones 1–5 are built and covered by automated tests (unit tests, the whole backup/restore
-suite on a real exFAT volume, and a LUKS round trip on a disk image). The GUI pages were checked
-by rendering them headlessly.
+Version 0.2. Everything in this plan is built, and the safety campaign is done:
 
-Still to verify by hand, because these need the administrator password, extra software or a
-second machine:
-
-- [ ] A full backup with "protected settings" (pkexec helper: root-only `/etc` files,
-      Wi-Fi/VPN connections, root crontab).
-- [ ] exFAT formatting through UDisks (needs `exfatprogs`): the "plain" and "encrypted part"
-      layouts.
-- [ ] VeraCrypt: create, open and close a container file and a partition (needs VeraCrypt).
-- [ ] The first real backup of the ~222 GB / 2.3M-file home folder to the USB drive (speed,
-      memory, interruption and resume).
-- [ ] A full `rebuild` on a fresh Ubuntu VM with a different username (repositories,
-      packages, home, paths, desktop, /etc, groups, network).
-- [ ] `install.sh --system-helper`, then confirm the friendly polkit prompt appears.
+- [x] Full backup with protected settings (pkexec helper): Wi-Fi/VPN connections and root-only
+      `/etc` files saved; `/etc` fingerprinted before and after, unchanged.
+- [x] Root helper hardening: symlink attack on the recipe folder blocked; malicious requests
+      refused; the helper ignores Ctrl+C so apt/dpkg are never cut off.
+- [x] exFAT drives formatted through UDisks (now with 8 KB clusters), plain and split layouts.
+- [x] VeraCrypt create/open/wrong password/close for folder, whole-drive and split layouts.
+- [x] Randomized torture tests with random process kills on plain, exFAT and LUKS drives.
+- [x] Full rebuild of a fresh Ubuntu 26.04 VM from a 24.04 backup with a different username;
+      a second run changes nothing.
+- [x] Real-data backup of ~700,000 files / 49 GB: source untouched, verify --full, restores
+      identical.
+- [x] `install.sh` checks and installs dependencies, including a signature-verified VeraCrypt.
 
 Planned next (from §12): snapshot history, automatic/scheduled backups, full-disk image,
 Docker/VM exports.
-

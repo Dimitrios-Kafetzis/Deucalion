@@ -105,7 +105,7 @@ class DriveFilesTest(unittest.TestCase):
 
 class ReposTest(unittest.TestCase):
     def test_ubuntu_mirror_is_ubuntu(self):
-        [r] = aptsources.parse("Types: deb\nURIs: http://ftp.cc.uoc.gr/mirrors/linux/ubuntu/packages/\n"
+        [r] = aptsources.parse("Types: deb\nURIs: http://ftp.cc.uoc.gr/mirrors/linux/ubuntu/\n"
                                "Suites: noble noble-updates\nComponents: main universe\n", "ubuntu.sources")
         self.assertEqual(r.kind, "ubuntu")
 

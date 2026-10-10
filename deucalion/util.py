@@ -16,6 +16,10 @@ class DeucalionError(Exception):
     """An error with a message that is safe to show to the user as-is."""
 
 
+DRIVE_FULL = ("The backup drive is full. Free some space (for example empty _removed/ with: "
+              "deucalion removed empty, or leave out large folders) and run again.")
+
+
 def human_size(n: float) -> str:
     for unit in ("B", "KB", "MB", "GB", "TB"):
         if abs(n) < 1024 or unit == "TB":
