@@ -1,0 +1,20 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="128" height="128" viewBox="0 0 128 128">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#62a0ea"/>
+      <stop offset="1" stop-color="#1a5fb4"/>
+    </linearGradient>
+    <linearGradient id="sea" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0" stop-color="#99c1f1"/>
+      <stop offset="1" stop-color="#3584e4"/>
+    </linearGradient>
+  </defs>
+  <rect x="8" y="8" width="112" height="112" rx="26" fill="url(#bg)"/>
+  <!-- the ark: a drive-shaped hull riding the waves -->
+  <path d="M30 62 h68 a6 6 0 0 1 5.6 8.2 l-6 15 a8 8 0 0 1 -7.4 5 H37.8 a8 8 0 0 1 -7.4 -5 l-6 -15 A6 6 0 0 1 30 62z" fill="#ffffff"/>
+  <rect x="40" y="38" width="48" height="24" rx="6" fill="#ffffff" opacity="0.92"/>
+  <circle cx="78" cy="50" r="3.2" fill="#33d17a"/>
+  <rect x="48" y="47" width="20" height="6" rx="3" fill="#1a5fb4" opacity="0.35"/>
+  <path d="M8 96 q14 -8 28 0 t28 0 t28 0 t28 0 V94 a26 26 0 0 1 0 0 V120 H8z" fill="url(#sea)" opacity="0.95"/>
+  <path d="M8 104 q14 -8 28 0 t28 0 t28 0 t28 0 v8 a8 8 0 0 1 -8 8 H34 a26 26 0 0 1 -26 -26z" fill="#1c71d8"/>
+</svg>

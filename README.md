@@ -19,8 +19,8 @@ Ubuntu LTS or on a new machine, even with a different username.
 - **Optional encryption.** Encrypt the whole drive, an encrypted part of it, or an encrypted
   folder on it: VeraCrypt (opens on Linux, macOS and Windows) or LUKS (Linux only).
 
-> **Status:** milestones 1–3 of 5 done (backup, restore, rebuild, drive setup and encryption, from
-> the command line). The GNOME app is next. See [docs/PLAN.md](docs/PLAN.md).
+> **Status:** milestones 1–4 of 5 done: backup, restore, rebuild, drive setup and encryption, as a
+> GNOME app and from the command line. Packaging/installation is next. See [docs/PLAN.md](docs/PLAN.md).
 
 ## Requirements
 
@@ -28,6 +28,10 @@ Ubuntu 22.04 or newer with Python 3.10+. Nothing to install: Deucalion uses only
 Ubuntu ships with.
 
 ## Quick start
+
+Run `bin/deucalion` with no arguments to open the app (GTK4/libadwaita, follows your light/dark
+theme): Overview, Back Up, Restore, Rebuild, Drives, Removed Files and Settings. Everything below
+can also be done from the command line:
 
 ```bash
 # from this folder (or from the Deucalion-Tool folder on your backup drive)

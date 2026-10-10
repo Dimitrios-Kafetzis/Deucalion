@@ -929,6 +929,16 @@ def cmd_close(cfg: Config, args) -> int:
     return 0
 
 
+def cmd_gui(cfg, args) -> int:
+    try:
+        from .gui.app import run_gui
+    except (ImportError, ValueError) as e:
+        print(red(f"The app can't start ({e}). The python3-gi, gir1.2-gtk-4.0 and gir1.2-adw-1 packages are "
+                  "needed."), file=sys.stderr)
+        return 1
+    return run_gui()
+
+
 def build_parser() -> argparse.ArgumentParser:
     p = argparse.ArgumentParser(
         prog="deucalion",
@@ -944,6 +954,7 @@ def build_parser() -> argparse.ArgumentParser:
     def target_opt(sp):
         sp.add_argument("--target", metavar="NAME", help="which registered drive to use")
 
+    add("gui", cmd_gui, "open the app (also what plain 'deucalion' does)")
     add("drives", cmd_drives, "list connected drives")
 
     sp = add("register", cmd_register, "use a drive (or a folder on it) for backups")
@@ -1038,6 +1049,8 @@ def main(argv: list[str] | None = None) -> int:
     parser = build_parser()
     args = parser.parse_args(argv)
     if not getattr(args, "func", None):
+        if (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")) and argv is None and len(sys.argv) == 1:
+            return cmd_gui(None, args)
         parser.print_help()
         return 0
     if os.geteuid() == 0 and not os.environ.get("DEUCALION_ALLOW_ROOT"):

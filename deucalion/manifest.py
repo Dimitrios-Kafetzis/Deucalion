@@ -167,6 +167,20 @@ class Manifest:
         for r in rows:
             yield _row_to_entry(r)
 
+    def search(self, text: str, limit: int = 200) -> list[Entry]:
+        """Entries whose name contains `text` (case-insensitive for ASCII)."""
+        esc = text.replace("\\", "\\\\").replace("%", "\\%").replace("_", "\\_")
+        rows = self.db.execute(
+            f"SELECT {_COLS} FROM entries WHERE CAST(path AS TEXT) LIKE ? ESCAPE '\\'", (f"%{esc}%",))
+        out = []
+        for r in rows:  # the name itself must match, not just a parent folder
+            e = _row_to_entry(r)
+            if text.lower() in e.name.lower():
+                out.append(e)
+                if len(out) >= limit:
+                    break
+        return out
+
     def tree_totals(self, path: str = "") -> tuple[int, int]:
         """(bytes, files) below path."""
         if path == "":
