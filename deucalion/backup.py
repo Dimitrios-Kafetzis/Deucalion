@@ -363,6 +363,16 @@ class Scanner:
             except OSError as e:
                 self.plan.warnings.append(f"{src.origin}: cannot be read ({e.strerror}); skipped.")
                 continue
+            try:
+                with os.scandir(src.origin) as it:
+                    empty = next(it, None) is None
+            except OSError:
+                empty = False
+            if empty and self.m.children(src.name):
+                self.plan.warnings.append(
+                    f"{src.origin} is empty, but the backup has files from it. Skipped, to keep the backup "
+                    "safe (is its drive connected?).")
+                continue
             self._src_name = src.name
             root_entry = self._entry(src.name, src.name, "d", st)
             self._plan_dir(self.m.get(src.name), root_entry, (self.t.root / src.name).is_dir())
@@ -393,8 +403,12 @@ class Scanner:
                     continue
                 try:
                     st = de.stat(follow_symlinks=False)
-                except OSError:
+                except FileNotFoundError:
                     continue  # vanished while scanning
+                except OSError as e:
+                    self._skip(f"{L}/{name}", f"cannot be read ({e.strerror}); keeping what is already backed up")
+                    keep.add(name)
+                    continue
                 mode = st.st_mode
                 kind = "d" if stat.S_ISDIR(mode) else "f" if stat.S_ISREG(mode) else "l" if stat.S_ISLNK(mode) else None
                 child_rel = f"{rel}/{name}" if rel else name
@@ -430,10 +444,13 @@ class Scanner:
             # the exact folders/files that were asked for are mirrored this way.
             freed: set[str] = set()
             for name, pe in prev.items():
-                if (tree is not ALL and tree.get(name) is not ALL) or name in keep:
+                if name in keep:
                     continue
                 cur = current.get(name)
-                if cur is None or cur[2] != pe.kind:
+                kind_changed = cur is not None and cur[2] != pe.kind
+                if tree is not ALL and tree.get(name) is not ALL and not kind_changed:
+                    continue
+                if cur is None or kind_changed:
                     self._plan_remove(pe)
                     if pe.kind != "l":
                         freed.add(self.policy.fold(_basename(pe.stored)))
@@ -450,10 +467,26 @@ class Scanner:
                     fresh.append(name)
             need_listing = self.check_drive or any(current[n][2] != "l" for n in fresh)
             on_drive = self._drive_listing(S) if need_listing else None
-            used = {self.policy.fold(n) for n in on_drive or ()} - freed
-            used |= {self.policy.fold(_basename(s)) for s in stored_of.values() if s}
+            tracked = {self.policy.fold(_basename(s)) for s in stored_of.values() if s}
+            # Names on the drive the manifest doesn't know: leftovers of an interrupted run (copied but
+            # not yet recorded). They are moved to _removed/ rather than kept forever as untracked twins.
+            strays = {self.policy.fold(n): n for n in on_drive or ()}
+            for k in list(strays):
+                if k in tracked or k in freed:
+                    del strays[k]
+            used = tracked | set(strays)  # names taken in this folder (choose() adds to it)
             for name in sorted(fresh):
-                stored_of[name] = "" if current[name][2] == "l" else f"{S}/{self.policy.choose(name, used)}"
+                if current[name][2] == "l":
+                    stored_of[name] = ""
+                    continue
+                key = self.policy.fold(self.policy.encode(name))
+                if key in strays:
+                    stray = strays.pop(key)
+                    used.discard(key)
+                    self.plan.removals.append(Action("remove", Entry(path=f"{L}/\0stray/{stray}",
+                                                                     stored=f"{S}/{stray}", kind="x")))
+                    self.plan.removed_items += 1
+                stored_of[name] = f"{S}/{self.policy.choose(name, used)}"
 
             subdirs = []
             for name in sorted(current):
@@ -749,6 +782,11 @@ class BackupJob:
         stats = {k: getattr(result, k) for k in ("copied_files", "copied_bytes", "removed_items")}
         stats["warnings"] = len(warnings)
         m.finish_run(run_id, result.finished, status, json.dumps(stats))
+        if status.startswith("completed"):
+            try:
+                m.snapshot()
+            except (OSError, sqlite3.Error) as e:
+                self.log.warning("could not save a copy of the manifest: %s", e)
         self._write_summary(result)
         return result
 

@@ -10,7 +10,7 @@ from ..common import (Adw, Gio, GLib, Gtk, alert, button, clamp, clear, group_ad
                       open_folder, page_with_header, row, run_async, scrolled, toast, vbox)
 from ...backup import BackupJob
 from ...logs import close_run_log, open_run_log
-from ...util import human_duration, human_size
+from ...util import human_duration, human_size, plural
 
 
 class BackupPage:
@@ -328,8 +328,8 @@ class BackupPage:
             self._show_done("cancelled", "Backup stopped",
                             f"{result.copied_files:,} files were copied. The next backup continues from here.", [])
         else:
-            text = (f"Copied {result.copied_files:,} files ({human_size(result.copied_bytes)}) in "
-                    f"{human_duration(result.duration)}. {result.removed_items:,} items moved to Removed Files.")
+            text = (f"Copied {plural(result.copied_files, 'file')} ({human_size(result.copied_bytes)}) in "
+                    f"{human_duration(result.duration)}. {plural(result.removed_items, 'item')} moved to Removed Files.")
             title = "Backup complete" if result.status == "completed" else "Backup complete, with warnings"
             self._show_done(result.status, title, text, result.warnings)
             if self.state.target is not None:

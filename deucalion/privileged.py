@@ -14,6 +14,18 @@ from typing import Callable
 from .util import DeucalionError
 
 HELPER = Path(__file__).with_name("helper.py")
+SYSTEM_HELPER = Path("/usr/local/libexec/deucalion/helper.py")   # installed by install.sh --system-helper
+
+
+def helper_path() -> Path:
+    """Prefer the root-owned system copy: code that runs as root should not be user-writable."""
+    try:
+        st = SYSTEM_HELPER.stat()
+        if st.st_uid == 0 and not st.st_mode & 0o022:
+            return SYSTEM_HELPER
+    except OSError:
+        pass
+    return HELPER
 
 
 class Privileged:
@@ -34,8 +46,12 @@ class Privileged:
     def start(self) -> None:
         if self.proc is not None:
             return
-        python = "/usr/bin/python3" if Path("/usr/bin/python3").exists() else sys.executable
-        cmd = [python, "-I", str(HELPER), "serve"]
+        helper = helper_path()
+        if helper == SYSTEM_HELPER:
+            cmd = [str(SYSTEM_HELPER), "serve"]  # its own path is what the polkit policy names
+        else:
+            python = "/usr/bin/python3" if Path("/usr/bin/python3").exists() else sys.executable
+            cmd = [python, "-I", str(helper), "serve"]
         if self.method == "pkexec":
             cmd = ["pkexec"] + cmd
         elif self.method == "sudo":

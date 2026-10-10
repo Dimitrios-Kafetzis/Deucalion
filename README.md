@@ -19,13 +19,34 @@ Ubuntu LTS or on a new machine, even with a different username.
 - **Optional encryption.** Encrypt the whole drive, an encrypted part of it, or an encrypted
   folder on it: VeraCrypt (opens on Linux, macOS and Windows) or LUKS (Linux only).
 
-> **Status:** milestones 1–4 of 5 done: backup, restore, rebuild, drive setup and encryption, as a
-> GNOME app and from the command line. Packaging/installation is next. See [docs/PLAN.md](docs/PLAN.md).
+> **Status:** version 0.1, all five milestones built: backup, restore, rebuild, drive setup and
+> encryption, as a GNOME app and from the command line. A few parts still need testing on real
+> hardware with administrator rights; see [docs/PLAN.md](docs/PLAN.md#status).
 
-## Requirements
+## Install
 
-Ubuntu 22.04 or newer with Python 3.10+. Nothing to install: Deucalion uses only what
-Ubuntu ships with.
+```bash
+git clone https://github.com/Dimitrios-Kafetzis/Deucalion.git
+cd Deucalion
+./install.sh                    # app menu entry + 'deucalion' command, for your user only
+./install.sh --system-helper    # recommended: also installs the administrator helper system-wide
+```
+
+`--system-helper` asks for your password once. It puts a root-owned copy of the small
+administrator helper in `/usr/local/libexec/deucalion/`, so code that runs as root can't be
+changed by other programs. It also adds a clear password prompt ("Deucalion needs administrator
+access…") that is remembered for a few minutes. `./install.sh --uninstall` removes everything
+except your backups and settings.
+
+You can also run Deucalion without installing it: `bin/deucalion` (from a clone, or from the
+`Deucalion-Tool` folder on a backup drive).
+
+### Requirements
+
+Ubuntu 22.04 or newer (Python 3.10+). Everything else ships with Ubuntu Desktop, except:
+
+- `exfatprogs`: needed to *format* exFAT drives. Deucalion offers to install it.
+- [VeraCrypt](https://www.veracrypt.fr/en/Downloads.html): only for VeraCrypt-encrypted drives.
 
 ## Quick start
 

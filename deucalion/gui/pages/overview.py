@@ -7,7 +7,7 @@ import json
 
 from ..common import (Adw, Gtk, button, clamp, clear, group_add, hbox, label, page_with_header, row, run_async,
                       scrolled, vbox, when)
-from ...util import human_size
+from ...util import human_size, plural
 
 STATUS_ICON = {"completed": ("emblem-ok-symbolic", "status-ok"),
                "completed_with_warnings": ("dialog-warning-symbolic", "status-warn"),
@@ -115,7 +115,7 @@ class OverviewPage:
         last_full = summary.get("last_full_backup")
         self.cards.append(self._card("Last backup", when(last.get("finished")),
                                      STATUS_TEXT.get(last.get("status"), "No backup yet")))
-        self.cards.append(self._card("In the backup", human_size(size), f"{files:,} files"))
+        self.cards.append(self._card("In the backup", human_size(size), plural(files, "file")))
         self.cards.append(self._card("Removed files", human_size(removed),
                                      "old versions & deleted files kept on the drive"))
         if not last_full:

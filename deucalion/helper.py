@@ -1,3 +1,4 @@
+#!/usr/bin/python3 -I
 """Deucalion's administrator helper.
 
 This file runs as root (started with pkexec or sudo) and does only the fixed
@@ -261,7 +262,7 @@ def _chown_tree(path: str, uid: int, gid: int) -> None:
     for root, dirs, files in os.walk(path):
         for n in dirs + files:
             os.lchown(os.path.join(root, n), uid, gid)
-    os.lchown(path, uid, gid)
+    os.lchown(path, uid, gid)  # last: until now only root could reach anything inside
 
 
 # ----------------------------------------------------------------------------------------------
@@ -297,32 +298,30 @@ def _run_streaming(cmd: list[str], emit) -> int:
     return p.wait()
 
 
-def op_collect_admin(emit, outdir: str, uid: int, gid: int) -> dict:
-    outdir = _check_dir(outdir)
+def op_collect_admin(emit, uid: int, gid: int) -> dict:
+    """Collect root-only system settings into a NEW folder that only root can reach while it is
+    being filled (so nothing can redirect these root writes with symlinks), then hand the folder
+    to the user. The normal-user Deucalion process copies it into the recipe and deletes it."""
+    import tempfile
+    outdir = tempfile.mkdtemp(prefix="deucalion-admin-", dir="/tmp")  # 0700, owned by root
     result = collect_etc(outdir)
-    # Network connections (Wi-Fi passwords, VPNs)
     nm_src = "/etc/NetworkManager/system-connections"
     nm_dst = os.path.join(outdir, "network", "system-connections")
-    written = set()
+    count = 0
     if os.path.isdir(nm_src):
         for n in sorted(os.listdir(nm_src)):
             p = os.path.join(nm_src, n)
             if os.path.isfile(p) and not os.path.islink(p):
                 with open(p, "rb") as f:
-                    dest = os.path.join(nm_dst, n)
-                    _write_if_changed(dest, f.read(), 0o600)
-                    written.add(dest)
-    _prune(nm_dst, written)
-    result["network_connections"] = len(written)
-    # root's crontab
+                    _write_if_changed(os.path.join(nm_dst, n), f.read(), 0o600)
+                count += 1
+    result["network_connections"] = count
     root_cron = "/var/spool/cron/crontabs/root"
-    dest = os.path.join(outdir, "services", "root-crontab.txt")
-    if os.path.isfile(root_cron):
+    if os.path.isfile(root_cron) and not os.path.islink(root_cron):
         with open(root_cron, "rb") as f:
-            _write_if_changed(dest, f.read(), 0o600)
-    elif os.path.exists(dest):
-        os.remove(dest)
-    _chown_tree(outdir, uid, gid)
+            _write_if_changed(os.path.join(outdir, "services", "root-crontab.txt"), f.read(), 0o600)
+    _chown_tree(outdir, int(uid), int(gid))  # lchown everything; the top folder last
+    result["folder"] = outdir
     return result
 
 
@@ -391,6 +390,7 @@ def op_put_etc_file(emit, src: str, dest: str, mode: int, undo_dir: str) -> dict
         raise OpError(f"not an allowed /etc file: {dest}")
     if not os.path.isfile(src):
         raise OpError(f"missing source: {src}")
+    undo_dir = os.path.normpath(undo_dir)
     if not undo_dir.startswith("/var/backups/deucalion/"):
         raise OpError("bad undo folder")
     if os.path.lexists(dest):
@@ -604,7 +604,7 @@ def op_veracrypt_create(emit, source: str, passphrase: str, label: str, uid: int
         if loop:
             subprocess.run(["losetup", "-d", loop], capture_output=True)
     if is_file:
-        os.chown(source, int(uid), int(gid))
+        os.lchown(source, int(uid), int(gid))  # never follow a symlink swapped in meanwhile
     return {"source": source}
 
 
@@ -649,7 +649,8 @@ def op_veracrypt_close(emit, mountpoint: str, name: str, loop: str | None = None
     if not _NAME_RE.match(name):
         raise OpError(f"bad mapping name {name}")
     if mountpoint and os.path.ismount(mountpoint):
-        if not mountpoint.startswith("/media/"):
+        mountpoint = os.path.realpath(mountpoint)
+        if not re.match(r"^/media/[^/]+/[^/]+$", mountpoint):
             raise OpError("not a Deucalion mount point")
         subprocess.run(["sync"])
         _out(["umount", mountpoint])

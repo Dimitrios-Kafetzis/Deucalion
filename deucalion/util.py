@@ -24,6 +24,11 @@ def human_size(n: float) -> str:
     return f"{n:.1f} TB"
 
 
+def plural(n: int, word: str, words: str | None = None) -> str:
+    """plural(1, 'file') -> '1 file', plural(3, 'file') -> '3 files' (with thousands separators)."""
+    return f"{n:,} {word if n == 1 else (words or word + 's')}"
+
+
 def human_duration(seconds: float) -> str:
     seconds = int(seconds)
     if seconds < 60:

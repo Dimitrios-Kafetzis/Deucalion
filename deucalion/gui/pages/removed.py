@@ -4,7 +4,7 @@ from __future__ import annotations
 
 from ..common import (Adw, Gtk, alert, button, clear, group_add, label, open_folder, page_with_header, row,
                       run_async, stamp_to_text, toast)
-from ...util import human_size
+from ...util import human_size, plural
 
 
 class RemovedPage:
@@ -56,7 +56,7 @@ class RemovedPage:
         for name, size, files in reversed(batches):
             c = Gtk.CheckButton(valign=Gtk.Align.CENTER)
             c.connect("toggled", lambda *_: self._update())
-            r = row(f"From the backup of {stamp_to_text(name)}", f"{files:,} files · {human_size(size)}",
+            r = row(f"From the backup of {stamp_to_text(name)}", f"{plural(files, 'file')} · {human_size(size)}",
                     activatable=True)
             r.add_prefix(c)
             r.set_activatable_widget(c)

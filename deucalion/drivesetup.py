@@ -120,7 +120,7 @@ class DriveSetup:
         res = run(["lsblk", "-dno", "TYPE", device])
         if res.returncode != 0 or res.stdout.strip() not in ("disk", "loop"):
             raise DeucalionError(f"{device} is not a whole drive.")
-        system = backing_disks("/") | backing_disks(Path.home())
+        system = _system_disks()
         if device in system:
             raise DeucalionError(f"{device} holds your system. Deucalion never changes it.")
         if not allow_internal:
@@ -205,7 +205,7 @@ class DriveSetup:
         folder = Path(req.folder)
         if not folder.is_dir():
             raise DeucalionError(f"{folder} is not a mounted drive.")
-        if not req.allow_internal and backing_disks(folder) & (backing_disks("/") | backing_disks(Path.home())):
+        if not req.allow_internal and backing_disks(folder) & _system_disks():
             raise DeucalionError(f"{folder} is on your system disk. Choose an external drive.")
         path = folder / CONTAINER[req.method]
         if path.exists():
@@ -300,6 +300,19 @@ class DriveSetup:
         if clear:
             self.u.unmount(clear)
             self.u.lock(crypt)
+
+
+def _system_disks() -> set[str]:
+    """Disks holding the running system. Refuses to guess: if they can't be found (e.g. a ZFS root),
+    no drive may be changed."""
+    disks: set[str] = set()
+    for mp in ("/", "/boot", "/boot/efi", "/home", str(Path.home())):
+        if os.path.ismount(mp) or mp in ("/", str(Path.home())):
+            disks |= backing_disks(mp)
+    if not disks:
+        raise DeucalionError("Could not tell which disk holds your system, so no drive will be changed "
+                             "(this protects your system disk).")
+    return disks
 
 
 def _username() -> str:

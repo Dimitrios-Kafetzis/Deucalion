@@ -23,7 +23,7 @@ from pathlib import Path
 
 from . import helper
 from .config import state_dir
-from .util import os_release, run
+from .util import DeucalionError, os_release, run
 
 FORMAT = 1
 APT_KEY_DIRS = [Path("/etc/apt/keyrings"), Path("/etc/apt/trusted.gpg.d")]
@@ -360,7 +360,8 @@ def collect(home: Path, privileged=None, log: logging.Logger | None = None) -> R
     marker = root / "etc" / "collected-by.txt"
     if privileged is not None:
         try:
-            r = privileged.call("collect_admin", outdir=str(root), uid=os.getuid(), gid=os.getgid())
+            r = privileged.call("collect_admin", uid=os.getuid(), gid=os.getgid())
+            _take_admin_folder(w, Path(r["folder"]))
             res.admin = True
             res.summary["etc_files"] = r.get("files", 0)
             res.summary["network_connections"] = r.get("network_connections", 0)
@@ -379,7 +380,22 @@ def collect(home: Path, privileged=None, log: logging.Logger | None = None) -> R
             if r["unreadable"]:
                 res.warnings.append(f"{r['unreadable']} system files (and network connections) can only be "
                                     "saved with administrator access.")
-    for kept in ("etc", "network", "services/root-crontab.txt"):
-        w.keep_tree(kept)
+    if not res.admin:
+        for kept in ("etc", "network", "services/root-crontab.txt"):
+            w.keep_tree(kept)
     w.prune()
     return res
+
+
+def _take_admin_folder(w: _Writer, folder: Path) -> None:
+    """Copy what the administrator helper collected into the recipe (as the normal user)."""
+    try:
+        if folder.is_symlink() or not folder.is_dir() or folder.stat().st_uid != os.getuid():
+            raise DeucalionError("unexpected folder from the administrator helper")
+        for dirpath, dirs, files in os.walk(folder):
+            for n in files:
+                p = Path(dirpath) / n
+                if not p.is_symlink():
+                    w.write(str(p.relative_to(folder)), p.read_bytes(), 0o600)
+    finally:
+        shutil.rmtree(folder, ignore_errors=True)

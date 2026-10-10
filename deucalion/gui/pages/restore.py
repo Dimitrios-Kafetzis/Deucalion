@@ -9,7 +9,7 @@ from ..common import (Adw, Gio, GLib, Gtk, alert, button, clamp, clear, hbox, la
                       page_with_header, run_async, scrolled, toast, vbox)
 from ...manifest import Entry
 from ...restore import Restorer
-from ...util import human_duration, human_size
+from ...util import human_duration, human_size, plural
 
 MAX_ROWS = 600
 
@@ -150,7 +150,7 @@ class RestorePage:
     def _row(self, e: Entry, show_path: bool = False) -> Gtk.Widget:
         if e.kind == "d":
             size, files = self.manifest.tree_totals(e.path)
-            sub, icon = f"{files:,} files · {human_size(size)}", "folder-symbolic"
+            sub, icon = f"{plural(files, 'file')} · {human_size(size)}", "folder-symbolic"
         elif e.kind == "l":
             sub, icon = f"link to {e.link}", "emblem-symbolic-link-symbolic"
         else:
@@ -272,7 +272,7 @@ class RestorePage:
         ok = res.status == "completed"
         self.done.set_icon_name("emblem-ok-symbolic" if ok else "dialog-warning-symbolic")
         self.done.set_title("Restored" if res.status != "cancelled" else "Restore stopped")
-        desc = f"{res.restored_files:,} files ({human_size(res.restored_bytes)}) restored."
+        desc = f"{plural(res.restored_files, 'file')} ({human_size(res.restored_bytes)}) restored."
         if res.undo_dir:
             desc += f"\nThe files that were replaced are kept in {res.undo_dir}."
         self.done.set_description(desc)

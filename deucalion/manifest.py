@@ -101,7 +101,7 @@ class Manifest:
         self.path = path
         self.db = sqlite3.connect(str(path), isolation_level="DEFERRED", check_same_thread=False)
         self.db.execute("PRAGMA journal_mode=DELETE")
-        self.db.execute("PRAGMA synchronous=NORMAL")
+        self.db.execute("PRAGMA synchronous=FULL")  # survives a yanked USB drive
         self.db.execute("PRAGMA cache_size=-131072")  # 128 MB: fewer reads from slow USB drives
         self.db.executescript(_SCHEMA)
         if self.get_meta("schema") is None:
@@ -219,6 +219,18 @@ class Manifest:
         self.db.commit()
         self._pending = 0
         self._last_commit = time.monotonic()
+
+    def snapshot(self) -> None:
+        """Keep a copy of the manifest (after a completed run): it is the only record of
+        original names, permissions and symlinks."""
+        self.commit()
+        tmp = self.path.with_name(self.path.name + ".bak.tmp")
+        dest = sqlite3.connect(str(tmp))
+        try:
+            self.db.backup(dest)
+        finally:
+            dest.close()
+        os.replace(tmp, self.path.with_name(self.path.name + ".bak"))
 
     def close(self) -> None:
         self.commit()

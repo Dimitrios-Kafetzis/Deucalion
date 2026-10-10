@@ -23,7 +23,7 @@ from .privileged import Privileged
 from .logs import close_run_log, open_run_log
 from .restore import Restorer
 from .target import Target
-from .util import DeucalionError, fs_type, human_duration, human_size, is_encrypted, run
+from .util import DeucalionError, fs_type, human_duration, human_size, is_encrypted, plural, run
 from .verify import verify
 
 # --------------------------------------------------------------------------------------------
@@ -331,8 +331,8 @@ def cmd_backup(cfg: Config, args) -> int:
                 print(red(f"Backup failed: {result.error}"))
                 return 1
             _print_warnings(result.warnings[len(plan.warnings):], [], args.details)
-            msg = (f"Backup finished in {human_duration(result.duration)}: copied {result.copied_files:,} "
-                   f"files ({human_size(result.copied_bytes)}), moved {result.removed_items:,} items to _removed/.")
+            msg = (f"Backup finished in {human_duration(result.duration)}: copied {plural(result.copied_files, 'file')} "
+                   f"({human_size(result.copied_bytes)}), moved {plural(result.removed_items, 'item')} to _removed/.")
             print(green(msg) if result.status == "completed" else yellow(msg + " Some warnings above."))
             if log_paths:
                 print(dim(f"Log: {log_paths[0]}"))
@@ -449,7 +449,7 @@ def cmd_restore(cfg: Config, args) -> int:
             if res.status == "cancelled":
                 print(yellow(f"Stopped after restoring {res.restored_files:,} files."))
             else:
-                print(green(f"Restored {res.restored_files:,} files ({human_size(res.restored_bytes)})."))
+                print(green(f"Restored {plural(res.restored_files, 'file')} ({human_size(res.restored_bytes)})."))
             if res.undo_dir:
                 print(f"Files that were replaced are kept in {res.undo_dir}")
             return 130 if res.status == "cancelled" else 0

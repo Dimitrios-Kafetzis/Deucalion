@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Deucalion
+GenericName=Backup
+Comment=Back up your computer to an external drive, and rebuild it later
+Exec=deucalion
+Icon=io.github.DimitriosKafetzis.Deucalion
+Terminal=false
+Categories=Utility;Archiving;GTK;
+Keywords=backup;restore;rebuild;migrate;encryption;drive;
+StartupNotify=true

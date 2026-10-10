@@ -109,10 +109,23 @@ class Restorer:
     # -- planning ----------------------------------------------------------------------------------------
     def plan(self, args: list[str], to: Path | None = None) -> RestorePlan:
         plan = RestorePlan()
+        roots: dict[str, Path] = {}
         for arg in args:
             logical, dest = self.resolve(arg)
             if to is not None:
                 dest = Path(to).expanduser().absolute() / dest.name
+            roots.setdefault(logical, dest)
+        # An item inside another chosen folder is restored with that folder.
+        chosen = {l: d for l, d in roots.items()
+                  if not any(l != o and (o == "" or l.startswith(o + "/")) for o in roots)}
+        dests: dict[Path, str] = {}
+        for logical, dest in chosen.items():
+            other = next((l for d, l in dests.items() if d == dest or dest in d.parents or d in dest.parents), None)
+            if other is not None:
+                raise DeucalionError(f"“{logical}” and “{other}” would be restored to the same place ({dest}). "
+                                     "Restore them separately, or into different folders.")
+            dests[dest] = logical
+        for logical, dest in chosen.items():
             plan.roots.append((logical, dest))
             for e in self.m.iter_tree(logical):
                 d = dest if e.path == logical else dest / e.path[len(logical) + 1:]
@@ -167,6 +180,10 @@ class Restorer:
             nonlocal used_undo
             aside = undo_root / str(path).lstrip("/")
             aside.parent.mkdir(parents=True, exist_ok=True)
+            n = 2
+            while os.path.lexists(aside):  # never replace something already kept
+                aside = aside.with_name(f"{path.name} ({n})")
+                n += 1
             shutil.move(str(path), str(aside))
             used_undo = True
             self.log.info("moved aside: %s -> %s", path, aside)
@@ -183,25 +200,33 @@ class Restorer:
                     warnings.append(f"{e.path}: missing on the drive; not restored.")
                     continue
                 progress.current = str(dest)
-                if item.op == "overwrite":
-                    move_aside(dest)
-                dest.parent.mkdir(parents=True, exist_ok=True)
-                if e.kind == "d":
-                    dest.mkdir(exist_ok=True)
-                    made_dirs.append(item)
-                elif e.kind == "l":
-                    os.symlink(e.link, dest)
-                    self._apply_owner(dest, e)
-                    try:
-                        os.utime(dest, ns=(e.mtime_ns, e.mtime_ns), follow_symlinks=False)
-                    except (OSError, NotImplementedError):
-                        pass
-                else:
-                    ok = self._copy(e, dest, progress, report, warnings)
-                    if ok:
-                        restored_files += 1
-                        restored_bytes += e.size
-                    progress.files_done += 1
+                moved = False
+                try:
+                    # Check again now: something may have appeared here since the plan was made.
+                    is_dir_now = dest.is_dir() and not dest.is_symlink()
+                    if os.path.lexists(dest) and not (e.kind == "d" and is_dir_now):
+                        move_aside(dest)
+                        moved = True
+                    dest.parent.mkdir(parents=True, exist_ok=True)
+                    if e.kind == "d":
+                        dest.mkdir(exist_ok=True)
+                        made_dirs.append(item)
+                    elif e.kind == "l":
+                        os.symlink(e.link, dest)
+                        self._apply_owner(dest, e)
+                        try:
+                            os.utime(dest, ns=(e.mtime_ns, e.mtime_ns), follow_symlinks=False)
+                        except (OSError, NotImplementedError):
+                            pass
+                    else:
+                        ok = self._copy(e, dest, progress, report, warnings, moved)
+                        if ok:
+                            restored_files += 1
+                            restored_bytes += e.size
+                        progress.files_done += 1
+                except OSError as err:
+                    warnings.append(f"{dest}: could not be restored ({err.strerror})"
+                                    + ("; the version that was there is in the undo folder." if moved else "."))
                 report()
         except Cancelled:
             status = "cancelled"
@@ -229,9 +254,11 @@ class Restorer:
         except OSError:
             pass
 
-    def _copy(self, e: Entry, dest: Path, progress: Progress, report, warnings: list[str]) -> bool:
+    def _copy(self, e: Entry, dest: Path, progress: Progress, report, warnings: list[str],
+              moved: bool = False) -> bool:
         src = self.t.root / e.stored
-        tmp = dest.with_name(f".{dest.name[:200]}.deucalion-restore")
+        self._tmp_n = getattr(self, "_tmp_n", 0) + 1
+        tmp = dest.with_name(f".deucalion-restore-{os.getpid()}-{self._tmp_n}")
         h = hashlib.sha256()
         copied = 0
         try:
@@ -253,14 +280,22 @@ class Restorer:
             self._apply_owner(tmp, e)
             os.replace(tmp, dest)
         except Cancelled:
-            tmp.unlink(missing_ok=True)
+            _unlink_quietly(tmp)
             raise
         except OSError as err:
-            tmp.unlink(missing_ok=True)
-            warnings.append(f"{dest}: could not be restored ({err.strerror}).")
+            _unlink_quietly(tmp)
+            warnings.append(f"{dest}: could not be restored ({err.strerror})"
+                            + ("; the version that was there is in the undo folder." if moved else "."))
             return False
         if e.sha256 and h.hexdigest() != e.sha256:
             warnings.append(f"{dest}: restored, but its content does not match the checksum recorded "
                             "at backup time. The copy on the drive may be damaged.")
         self.log.info("restored: %s", dest)
         return True
+
+
+def _unlink_quietly(path: Path) -> None:
+    try:
+        path.unlink(missing_ok=True)
+    except OSError:
+        pass

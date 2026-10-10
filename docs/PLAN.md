@@ -266,3 +266,27 @@ Each milestone ends with something you can try on a real drive.
 5. **Polish**: install.sh, desktop entry and icon, docs, a full rebuild test in a VM with a different username.
 
 Testing never touches real drives: formatting and encryption tests run on disk-image files.
+
+## Status
+
+Milestones 1–5 are built and covered by automated tests (unit tests, the whole backup/restore
+suite on a real exFAT volume, and a LUKS round trip on a disk image). The GUI pages were checked
+by rendering them headlessly.
+
+Still to verify by hand, because these need the administrator password, extra software or a
+second machine:
+
+- [ ] A full backup with "protected settings" (pkexec helper: root-only `/etc` files,
+      Wi-Fi/VPN connections, root crontab).
+- [ ] exFAT formatting through UDisks (needs `exfatprogs`): the "plain" and "encrypted part"
+      layouts.
+- [ ] VeraCrypt: create, open and close a container file and a partition (needs VeraCrypt).
+- [ ] The first real backup of the ~222 GB / 2.3M-file home folder to the USB drive (speed,
+      memory, interruption and resume).
+- [ ] A full `rebuild` on a fresh Ubuntu VM with a different username (repositories,
+      packages, home, paths, desktop, /etc, groups, network).
+- [ ] `install.sh --system-helper`, then confirm the friendly polkit prompt appears.
+
+Planned next (from §12): snapshot history, automatic/scheduled backups, full-disk image,
+Docker/VM exports.
+
