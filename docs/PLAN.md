@@ -25,7 +25,7 @@ app. Both use the same engine.
 
 | Topic | Decision |
 |---|---|
-| Language | Python 3 (stdlib only) + `rsync`. Runs on a fresh Ubuntu from the drive. |
+| Language | Python 3 (stdlib only). Runs on a fresh Ubuntu from the drive. |
 | GUI | GTK4 + libadwaita (native GNOME look, preinstalled on Ubuntu 24.04+). |
 | Drive filesystem | **exFAT** by default (readable on Linux, macOS and Windows). ext4 is offered for Linux-only use. |
 | Linux metadata | Permissions, owners, symlinks and original file names are stored in a **manifest** on the drive and reapplied on restore. |
@@ -98,6 +98,17 @@ With option (a), whole-drive encryption, there is no unencrypted area. Install V
 - **Case collisions** (`Notes` and `notes` in the same folder) → the second one gets a suffix; the original name is recorded.
 - **Timestamps** → exFAT's 10 ms precision is handled (`--modify-window`), so unchanged files aren't copied again.
 - When the target is ext4 (LUKS / Linux-only), metadata is stored natively too, and the manifest is still written.
+
+### Implementation notes (milestone 1)
+- The copy engine is written in Python instead of calling rsync: rsync cannot store a file
+  under a different (exFAT-safe) name, and every file has to be visited anyway to record
+  its metadata. Copies go to a staging file and are renamed into place, as rsync does.
+- A backup is planned first and the plan is kept in a temporary SQLite file, so memory stays
+  small even for millions of files (2.3M files ≈ 50 MB RAM).
+- Incremental backups trust the manifest instead of listing every folder on the drive (slow on
+  USB hard disks). `deucalion verify` and `backup --check-drive` catch files missing on the drive;
+  the next backup copies them again.
+- Before backing up to a drive that holds another machine's/user's backup, the tool warns and asks.
 
 ## 6. Encryption options
 
@@ -207,7 +218,7 @@ Deucalion/
 │   ├── crypto.py              VeraCrypt + LUKS: create, open, close
 │   ├── names.py               exFAT-safe name encoding
 │   ├── manifest.py            SQLite manifest
-│   ├── backup.py              rsync orchestration, _removed handling, progress
+│   ├── backup.py              scan → plan → copy engine, _removed handling, progress
 │   ├── recipe.py              system recipe collectors (§3.2)
 │   ├── restore.py             file restore with preview/undo
 │   ├── rebuild.py             new-machine wizard steps
