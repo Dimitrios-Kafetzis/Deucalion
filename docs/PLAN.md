@@ -280,8 +280,11 @@ Version 0.2. Everything in this plan is built, and the safety campaign is done:
 - [x] Randomized torture tests with random process kills on plain, exFAT and LUKS drives.
 - [x] Full rebuild of a fresh Ubuntu 26.04 VM from a 24.04 backup with a different username;
       a second run changes nothing.
-- [x] Real-data backup of ~700,000 files / 49 GB: source untouched, verify --full, restores
-      identical.
+- [x] Real-data backup of `~/Personal_Projects` (699,735 files, 48.9 GB, 1.49M items) to an exFAT
+      drive with 8 KB clusters: scan 28 s, copy 75 min, 0 of 1,490,356 items changed in the
+      source, `verify --full` OK for every file, 5 restored projects (65,620 files) byte-identical,
+      incremental check 99 s with nothing to copy. (With exFAT's default 128 KB clusters the same
+      data needed more than 80 GB, which led to the 8 KB setting and the cluster-aware space check.)
 - [x] `install.sh` checks and installs dependencies, including a signature-verified VeraCrypt.
 
 Planned next (from §12): snapshot history, automatic/scheduled backups, full-disk image,
