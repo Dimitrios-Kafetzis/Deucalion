@@ -98,6 +98,21 @@ class LuksImageTest(unittest.TestCase):
         self.assertEqual(Target.find(self.cfg, "T1").root.joinpath("probe").read_text(), "x")
         self.ds.close_access(access)
 
+    def test_encrypt_folder_luks_close_detaches(self):
+        disk_obj = self.ds.u.resolve(self.disk)
+        self.ds.u.format(disk_obj, "ext4", label="Host", take_ownership=True)
+        host = Path(self.ds.u.mount(disk_obj))  # a plain filesystem to hold the encrypted folder
+        t = self.ds.run(SetupRequest("encrypt-folder", folder=str(host), method="luks", name="Inner",
+                                     size=64 * 1024 ** 2, passphrase="another good password", allow_internal=True))
+        access = self.cfg["targets"][t.id]["access"]
+        container = host / access["file"]
+        self.ds.close_access(access)
+        self.assertIsNone(self.ds.u.loop_for_file(str(container)))
+        self.ds.open(access, "another good password")
+        self.ds.close_access(access)
+        self.assertIsNone(self.ds.u.loop_for_file(str(container)))
+        self.ds.u.unmount(disk_obj)
+
 
 if __name__ == "__main__":
     unittest.main()

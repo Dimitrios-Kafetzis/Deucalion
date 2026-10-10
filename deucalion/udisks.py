@@ -130,7 +130,16 @@ class UDisks:
         mps = self.mountpoints(fs_obj)
         if mps:
             return mps[0]
-        return self.call(fs_obj, "Filesystem", "Mount", "(a{sv})", ({},))[0]
+        try:
+            return self.call(fs_obj, "Filesystem", "Mount", "(a{sv})", ({},))[0]
+        except DeucalionError as e:
+            # The desktop often mounts a freshly unlocked drive by itself at the same moment.
+            if "already mounted" not in str(e).lower():
+                raise
+            mps = self.wait_for(lambda: self.mountpoints(fs_obj), 5)
+            if not mps:
+                raise
+            return mps[0]
 
     def unmount(self, fs_obj: str) -> None:
         """Unmount, retrying for a few seconds: file indexers often open a freshly mounted drive."""
@@ -155,6 +164,14 @@ class UDisks:
         dev = res.stdout.strip().rsplit(" ", 1)[-1].rstrip(".")
         self.settle()
         return self.resolve(dev)
+
+    def loop_delete(self, loop_obj: str) -> None:
+        """Detach a loop device (files attached with loop_setup don't detach by themselves)."""
+        try:
+            self.call(loop_obj, "Loop", "Delete", "(a{sv})", ({},))
+        except DeucalionError:
+            pass
+        self.settle()
 
     def loop_for_file(self, path: str) -> str | None:
         res = run(["losetup", "-j", os.path.realpath(path), "-O", "NAME", "-n"])

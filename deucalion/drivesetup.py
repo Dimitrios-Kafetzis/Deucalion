@@ -300,6 +300,8 @@ class DriveSetup:
         if clear:
             self.u.unmount(clear)
             self.u.lock(crypt)
+        if access["kind"] == "file":
+            self.u.loop_delete(crypt)  # otherwise the drive holding the file stays busy
 
 
 def _system_disks() -> set[str]:
