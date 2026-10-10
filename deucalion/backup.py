@@ -33,7 +33,7 @@ from pathlib import Path
 from typing import Callable
 
 from . import __version__
-from .config import Config, Excluder, state_dir
+from .config import INTERNAL_HOME_EXCLUDES, Config, Excluder, state_dir
 from .manifest import Entry, Manifest
 from .target import Target
 from .util import DeucalionError, human_size, now_iso, os_release, run_stamp
@@ -61,7 +61,7 @@ class Source:
 
 
 def sources_from_config(cfg: Config) -> list[Source]:
-    out = [Source("home", cfg.home, "home", Excluder(cfg.get("home_excludes", [])))]
+    out = [Source("home", cfg.home, "home", Excluder(cfg.get("home_excludes", []) + INTERNAL_HOME_EXCLUDES))]
     for ef in cfg.get("extra_folders", []):
         out.append(Source(f"extras/{ef['name']}", Path(ef["path"]), "folder",
                           Excluder(ef.get("excludes", []))))
@@ -666,6 +666,15 @@ class BackupJob:
     def kind(self) -> str:
         return "partial" if self.only else "full"
 
+    def prepare_system(self, privileged=None) -> list[str]:
+        """Generate the system recipe and include it in this (full) backup. Returns warnings."""
+        from .recipe import collect
+        res = collect(self.cfg.home, privileged, self.log)
+        self.sources.append(Source("system", res.folder, "recipe", Excluder([])))
+        self.scope["system"] = ALL
+        self.system_warnings = res.warnings
+        return res.warnings
+
     def scan(self) -> Plan:
         self.target.check_filesystem()
         if self.manifest is None:
@@ -676,6 +685,7 @@ class BackupJob:
         plan = scanner.scan()
         plan.kind = self.kind
         plan.scope_text = ", ".join(self.only) if self.only else "everything"
+        plan.warnings[:0] = getattr(self, "system_warnings", [])
         return plan
 
     def space_problem(self, plan: Plan) -> str | None:

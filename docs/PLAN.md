@@ -110,6 +110,19 @@ With option (a), whole-drive encryption, there is no unencrypted area. Install V
   the next backup copies them again.
 - Before backing up to a drive that holds another machine's/user's backup, the tool warns and asks.
 
+### Implementation notes (milestone 2)
+- The system recipe is generated into `~/.local/state/deucalion/system/` and backed up like a
+  folder to `system/`; files are rewritten only when their content changes.
+- `/etc` changes are found by comparing with dpkg's checksums. Files that no package owns are
+  dropped when they are byte-identical to any packaged file (e.g. `/etc/profile` from
+  base-files), and marked "installer" when unchanged since the OS install.
+- On Ubuntu 23.10+ NetworkManager connections live in `/etc/netplan/90-NM-*.yaml`; both these
+  and classic keyfiles are saved and restored.
+- Administrator work goes through one helper process (`helper.py`, started once with pkexec or
+  sudo) that accepts only a fixed list of operations with checked arguments.
+- Still to do in v1: Docker image/volume export and VM disk images (currently only listed in
+  `system/software/containers-and-vms.json`), and a polkit policy with a friendly prompt (M5).
+
 ## 6. Encryption options
 
 | Option | Result | Readable on |

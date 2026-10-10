@@ -15,7 +15,9 @@ from pathlib import Path
 from . import __version__
 from .backup import BackupJob, Plan, Progress
 from .config import DEFAULT_HOME_EXCLUDES, Config
+from . import rebuild
 from .drives import list_drives
+from .privileged import Privileged
 from .logs import close_run_log, open_run_log
 from .restore import Restorer
 from .target import Target
@@ -244,6 +246,16 @@ def cmd_backup(cfg: Config, args) -> int:
                 if found:
                     print(yellow("Note: this drive is not encrypted, and your backup includes keys or "
                                  "logged-in sessions (" + ", ".join(found[:4]) + ")."))
+            if job.kind == "full" and cfg.get("system_recipe", True) and not args.no_system:
+                use_admin = cfg.get("system_admin", True) and not args.no_admin and not args.dry_run
+                print("Saving the system recipe (packages, settings, services)"
+                      + (" — you may be asked for your administrator password…" if use_admin else "…"))
+                priv = Privileged() if use_admin else None
+                try:
+                    job.prepare_system(priv)
+                finally:
+                    if priv:
+                        priv.close()
             try:
                 plan = job.scan()
             except Exception:
@@ -387,6 +399,130 @@ def cmd_restore(cfg: Config, args) -> int:
         finally:
             m.close()
             close_run_log(log)
+
+
+def _show_items(plan: "rebuild.StepPlan") -> None:
+    for n, it in enumerate(plan.items, 1):
+        if it.selectable:
+            box = green("[x]") if it.selected else "[ ]"
+            print(f"  {box} {n:>3}  {it.label}" + (dim(f"  — {it.detail}") if it.detail else ""))
+        else:
+            print(dim(f"   -  {n:>3}  {it.label}" + (f"  — {it.detail}" if it.detail else "")))
+
+
+def _parse_numbers(text: str, limit: int) -> list[int]:
+    out = []
+    for part in text.replace(",", " ").split():
+        if "-" in part:
+            a, _, b = part.partition("-")
+            if a.isdigit() and b.isdigit():
+                out += range(int(a), int(b) + 1)
+        elif part.isdigit():
+            out.append(int(part))
+    return [n for n in out if 1 <= n <= limit]
+
+
+def _ask_step(step: "rebuild.Step", plan: "rebuild.StepPlan") -> str:
+    """Interactive review. Returns 'apply', 'skip' or 'quit'."""
+    help_ = ("  Enter = apply the checked items · n = skip this step · numbers (2 5-7) = check/uncheck · "
+             "all / none · d N = show the change for item N · q = stop here")
+    print(dim(help_))
+    while True:
+        try:
+            ans = input(bold("  > ")).strip().lower()
+        except EOFError:
+            return "quit"
+        if ans in ("", "y", "yes"):
+            return "apply"
+        if ans in ("n", "no", "s", "skip"):
+            return "skip"
+        if ans in ("q", "quit"):
+            return "quit"
+        if ans in ("all", "none"):
+            for it in plan.actionable:
+                it.selected = ans == "all"
+        elif ans.startswith("d"):
+            for n in _parse_numbers(ans[1:], len(plan.items)):
+                it = plan.items[n - 1]
+                diff = rebuild.SystemConfigStep.diff(it) if isinstance(step, rebuild.SystemConfigStep) and it.data else ""
+                print(diff or dim("  (no details to show)"))
+            continue
+        else:
+            for n in _parse_numbers(ans, len(plan.items)):
+                it = plan.items[n - 1]
+                if it.selectable:
+                    it.selected = not it.selected
+        _show_items(plan)
+
+
+def cmd_rebuild(cfg: Config, args) -> int:
+    target = Target.find(cfg, args.target)
+    interactive = sys.stdin.isatty() and not args.yes
+    if not interactive and not args.yes and not args.dry_run:
+        raise DeucalionError("rebuild needs a terminal to ask you questions (or use --dry-run / --yes).")
+    printer = ProgressPrinter()
+    with target.lock():
+        m = target.manifest()
+        log, log_paths = open_run_log(target, "rebuild")
+        ctx = rebuild.Context(cfg, target, m, log)
+        state = rebuild.load_state(target)
+        steps = [s for s in rebuild.STEPS if not args.step or s.name == args.step]
+        report: list[tuple[str, str, list[str]]] = []
+        try:
+            print(bold(f"Rebuild from backup '{target.name}'"))
+            for n, step in enumerate(steps, 1):
+                done = state["steps"].get(step.name, {})
+                if done.get("status") == "done" and not args.step and not args.dry_run:
+                    print(dim(f"\n✓ {step.title}: done {done.get('when')} (run again with --step {step.name})"))
+                    continue
+                print(bold(f"\nStep {n}/{len(steps)}: {step.title}"))
+                plan = step.plan(ctx)
+                for note in plan.notes:
+                    print(f"  {note}")
+                _show_items(plan)
+                if args.dry_run:
+                    continue
+                if not plan.actionable:
+                    if step.name == "check" and interactive and not confirm("  Continue?", False):
+                        return 1
+                    rebuild.save_state(state, step.name, "done", [])
+                    continue
+                choice = _ask_step(step, plan) if interactive else "apply"
+                if choice == "quit":
+                    print("Stopped. Run 'deucalion rebuild' again to continue from here.")
+                    break
+                if choice == "skip":
+                    rebuild.save_state(state, step.name, "skipped", [])
+                    report.append((step.title, "skipped", []))
+                    continue
+                selected = [i for i in plan.actionable if i.selected]
+                kwargs = {"on_progress": printer} if step.name == "home" else {}
+                try:
+                    warnings = step.apply(ctx, selected, lambda line: (printer.clear(), print(f"    {line}")), **kwargs)
+                except DeucalionError as e:
+                    printer.clear()
+                    print(red(f"  {e}"))
+                    rebuild.save_state(state, step.name, "failed", [str(e)])
+                    report.append((step.title, "failed", [str(e)]))
+                    continue
+                printer.clear()
+                for w in warnings:
+                    print(yellow(f"    {w}"))
+                rebuild.save_state(state, step.name, "done", warnings)
+                report.append((step.title, "done", warnings))
+        finally:
+            ctx.close()
+            m.close()
+            close_run_log(log)
+        if args.dry_run:
+            print(dim("\nDry run: nothing was changed."))
+        elif report:
+            print(bold("\nSummary"))
+            for title, status, warnings in report:
+                colour = green if status == "done" and not warnings else yellow if status != "failed" else red
+                print(f"  {colour(status):<10} {title}" + (f"  ({len(warnings)} warnings)" if warnings else ""))
+            print("Log out and back in to finish (new groups and desktop settings take effect then).")
+        return 0
 
 
 def cmd_verify(cfg: Config, args) -> int:
@@ -563,6 +699,9 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--check-drive", action="store_true",
                     help="also check that every file is really on the drive (slower)")
     sp.add_argument("-y", "--yes", action="store_true", help="don't ask for confirmation")
+    sp.add_argument("--no-system", action="store_true", help="don't save the system recipe")
+    sp.add_argument("--no-admin", action="store_true",
+                    help="don't ask for the administrator password (some system settings are then not saved)")
     target_opt(sp)
 
     sp = add("status", cmd_status, "show the state of the backup")
@@ -578,6 +717,12 @@ def build_parser() -> argparse.ArgumentParser:
     sp.add_argument("--dry-run", action="store_true", help="show what would happen, change nothing")
     sp.add_argument("--details", action="store_true", help="list every file that would be overwritten")
     sp.add_argument("-y", "--yes", action="store_true", help="don't ask for confirmation")
+    target_opt(sp)
+
+    sp = add("rebuild", cmd_rebuild, "rebuild this machine from a backup (new machine or new Ubuntu)")
+    sp.add_argument("--step", choices=[st.name for st in rebuild.STEPS], help="run only this step (again)")
+    sp.add_argument("--dry-run", action="store_true", help="show every step's plan, change nothing")
+    sp.add_argument("-y", "--yes", action="store_true", help="apply the pre-selected items without asking")
     target_opt(sp)
 
     sp = add("verify", cmd_verify, "check the backup on the drive is complete and undamaged")

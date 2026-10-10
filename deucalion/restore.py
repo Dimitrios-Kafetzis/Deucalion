@@ -68,9 +68,9 @@ class Restorer:
         self.log = log or logging.getLogger("deucalion")
         self.is_root = os.geteuid() == 0
         # source name -> (origin on the old machine, where it goes on this machine)
-        self.sources: dict[str, tuple[str, Path]] = {}
+        self.sources: dict[str, tuple[str, Path | None]] = {}
         for name, (origin, kind) in self.m.sources().items():
-            here = self.cfg.home if kind == "home" else Path(origin)
+            here = self.cfg.home if kind == "home" else None if kind == "recipe" else Path(origin)
             self.sources[name] = (origin, here)
 
     # -- resolving what the user asked for ------------------------------------------------------
@@ -83,7 +83,7 @@ class Restorer:
             p = Path(os.path.abspath(os.path.expanduser(arg)))
             best = None
             for name, (origin, here) in self.sources.items():
-                for base in {Path(origin), here}:
+                for base in {Path(origin), here} - {None}:
                     if p == base or base in p.parents:
                         if best is None or len(str(base)) > len(str(best[1])):
                             best = (name, base)
@@ -98,6 +98,8 @@ class Restorer:
 
     def default_destination(self, logical: str) -> Path:
         for name, (_, here) in sorted(self.sources.items(), key=lambda kv: -len(kv[0])):
+            if here is None and (logical == name or logical.startswith(name + "/")):
+                return Path.cwd() / "deucalion-system" / logical[len(name):].lstrip("/")
             if logical == name:
                 return here
             if logical.startswith(name + "/"):

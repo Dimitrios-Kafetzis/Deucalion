@@ -33,8 +33,10 @@ DEFAULT_HOME_EXCLUDES = [
     ".config/**/CacheStorage/",
     ".config/**/CachedData/",
     ".config/**/CachedExtensionVSIXs/",
-    "Deucalion-before-restore/",
 ]
+
+# Always excluded (Deucalion's own working files); not editable.
+INTERNAL_HOME_EXCLUDES = [".local/state/deucalion/", "Deucalion-before-restore/"]
 
 # Off by default; shown in the GUI as one-click additions.
 OPTIONAL_EXCLUDES = ["node_modules/", "__pycache__/", ".venv/", "venv/", ".tox/", "target/debug/"]
@@ -48,6 +50,8 @@ DEFAULTS = {
     "extra_folders": [],      # [{"name": "srv", "path": "/srv", "excludes": []}]
     "profiles": {},           # name -> [paths]
     "keep_overwritten": True, # keep old versions of changed files in _removed/
+    "system_recipe": True,    # full backups also save the system recipe
+    "system_admin": True,     # ...including files that need the administrator password
 }
 
 
