@@ -60,8 +60,10 @@ class RestoreResult:
 class Restorer:
     def __init__(self, cfg: Config, target: Target, manifest: Manifest,
                  on_progress: Callable[[Progress], None] | None = None,
-                 cancel: threading.Event | None = None, log: logging.Logger | None = None):
+                 cancel: threading.Event | None = None, log: logging.Logger | None = None,
+                 equivalent: Callable | None = None):
         self.cfg = cfg
+        self.equivalent = equivalent   # optional: (local path, entry) -> True if it counts as the same
         self.t = target
         self.m = manifest
         self.on_progress = on_progress
@@ -154,10 +156,16 @@ class Restorer:
                 if st and os.path.isfile(dest) and not dest.is_symlink() \
                         and st.st_size == e.size and st.st_mtime_ns == e.mtime_ns and self._same_content(dest, e):
                     return RestoreItem("same", e, dest)
+                if st and self.equivalent and os.path.isfile(dest) and not dest.is_symlink() \
+                        and self.equivalent(dest, e):
+                    return RestoreItem("same", e, dest)
                 return RestoreItem("overwrite", e, dest)
             return RestoreItem("create", e, dest)
         # symlink
         if exists and dest.is_symlink() and os.readlink(dest) == e.link:
+            return RestoreItem("same", e, dest)
+        if exists and dest.is_symlink() and self.equivalent and getattr(self.equivalent, "link", None) \
+                and os.readlink(dest) == self.equivalent.link(e.link):
             return RestoreItem("same", e, dest)
         return RestoreItem("overwrite" if exists else "create", e, dest)
 

@@ -309,7 +309,11 @@ class PackagesStep(Step):
         local_names = {x["package"] for x in local}
         missing = [m for m in manual if m not in installed and m not in local_names
                    and not m.startswith(self.SKIP_PREFIXES)]
-        candidates = _apt_candidates(missing)
+        lists_empty = not any(Path("/var/lib/apt/lists").glob("*_Packages*"))
+        if lists_empty:
+            p.notes.append("This machine's package lists are empty (a new installation); they are refreshed "
+                           "first, and any package that turns out not to exist is reported then.")
+        candidates = _apt_candidates(missing) if not lists_empty else {m: True for m in missing}
         unavailable = []
         for pkg in missing:
             if candidates.get(pkg):
@@ -364,6 +368,8 @@ class PackagesStep(Step):
         priv = ctx.priv()
         apt = [i.data["name"] for i in items if i.data["type"] == "apt"]
         if apt:
+            out("Refreshing package lists (apt update)…")
+            priv.call("apt_update", on_progress=out)
             out(f"Installing {len(apt)} apt packages…")
             if priv.call("apt_install", packages=apt, on_progress=out).get("code"):
                 out("Installing all at once failed; trying one by one…")
@@ -412,7 +418,8 @@ class HomeStep(Step):
                 paths.append(i.data)
         if not paths:
             return []
-        r = Restorer(ctx.cfg, ctx.t, ctx.m, on_progress=on_progress, cancel=ctx.cancel, log=ctx.log)
+        r = Restorer(ctx.cfg, ctx.t, ctx.m, on_progress=on_progress, cancel=ctx.cancel, log=ctx.log,
+                     equivalent=_after_path_update(ctx))
         plan = r.plan(paths)
         out(f"Restoring {plan.copy_files:,} files ({human_size(plan.copy_bytes)}); "
             f"{plan.count('overwrite'):,} existing files will be moved aside first…")
@@ -423,6 +430,24 @@ class HomeStep(Step):
             out(f"Replaced files are kept in {res.undo_dir}")
         out(f"Restored {res.restored_files:,} files.")
         return res.warnings
+
+
+def _after_path_update(ctx: Context):
+    """A local settings file that equals the backup's version with the home path updated (what the
+    Paths step produces) counts as already restored, so running the rebuild again changes nothing."""
+    if not ctx.home_changed:
+        return None
+
+    def same(local: Path, e) -> bool:
+        if e.size > PathsStep.MAX_SIZE:
+            return False
+        src = ctx.t.root / e.stored
+        try:
+            return ctx.map_paths_bytes(src.read_bytes()) == local.read_bytes()
+        except OSError:
+            return False
+    same.link = ctx.map_paths  # symlinks whose target was updated count as the same too
+    return same
 
 
 class PathsStep(Step):
@@ -441,8 +466,11 @@ class PathsStep(Step):
                 continue
             path = home / rel
             if e.kind == "l":
-                if e.link and ctx.map_paths(e.link) != e.link and path.is_symlink():
-                    p.items.append(Item(rel, f"~/{rel}", f"link → {e.link}", True, True, {"type": "link", "path": str(path)}))
+                if not path.is_symlink():
+                    continue
+                current = os.readlink(path)
+                if ctx.map_paths(current) != current:  # still points into the old home folder
+                    p.items.append(Item(rel, f"~/{rel}", f"link → {current}", True, True, {"type": "link", "path": str(path)}))
             elif e.kind == "f" and e.size <= self.MAX_SIZE:
                 try:
                     st = os.lstat(path)
@@ -503,6 +531,10 @@ class DesktopStep(Step):
         if not text:
             p.notes.append("The backup has no desktop settings.")
             return p
+        if not shutil.which("dconf"):
+            p.notes.append("This machine has no GNOME settings tool (dconf), so desktop settings can't be "
+                           "loaded here. Install the 'dconf-cli' package (on a GNOME desktop) and run this step again.")
+            return p
         sections = sum(1 for l in text.splitlines() if l.startswith("["))
         p.items.append(Item("dconf", "Load all desktop settings",
                             f"{sections} groups: wallpaper, dock, keyboard shortcuts, app settings…", True, True))
@@ -519,6 +551,8 @@ class DesktopStep(Step):
     def apply(self, ctx: Context, items: list[Item], out: Out) -> list[str]:
         if not items:
             return []
+        if not shutil.which("dconf"):
+            return ["dconf is not installed here; desktop settings were not changed."]
         text = ctx.map_paths(ctx.read_text("desktop/dconf.ini") or "")
         current = subprocess.run(["dconf", "dump", "/"], capture_output=True, text=True)
         if current.returncode != 0:
@@ -571,7 +605,9 @@ class SystemConfigStep(Step):
             detail = f"{it.get('status')}{' (' + it['package'] + ')' if it.get('package') else ''}, {what}"
             # Pre-selected only in well-understood places, and only when nothing would be overwritten
             # or it is a package's own config file you had changed.
-            safe = path.startswith(ETC_SAFE) and (not exists or it.get("status") == "modified")
+            # ...and only where the program using it exists here (its folder is present).
+            safe = path.startswith(ETC_SAFE) and (not exists or it.get("status") == "modified") \
+                and os.path.isdir(os.path.dirname(path))
             p.items.append(Item(path, path, detail, safe, True,
                                 {"src": str(src), "mode": it.get("mode", 0o644), "current": cur, "new": new,
                                  "owner": it.get("owner", ""), "group": it.get("group", "")}))
@@ -615,7 +651,7 @@ class ServicesStep(Step):
         # Groups
         old_groups = set((ctx.info.get("user") or {}).get("groups", []))
         user = os.environ.get("USER") or ctx.new_user
-        cur_groups = set(((_lines(["id", "-Gn"]) or [""])[0]).split())
+        cur_groups = set(((_lines(["id", "-Gn", user]) or [""])[0]).split())  # the group database, not this session
         existing = {l.split(":")[0] for l in Path("/etc/group").read_text().splitlines() if l}
         for g in sorted(old_groups - cur_groups - {ctx.old_user}):
             if g in existing:
@@ -623,6 +659,10 @@ class ServicesStep(Step):
                                     {"type": "group", "group": g, "user": user}))
         # Crontabs
         cron = ctx.read_text("services/user-crontab.txt")
+        if cron and not shutil.which("crontab"):
+            p.notes.append("Your scheduled tasks (crontab) are in the backup, but cron is not installed here. "
+                           "Install the 'cron' package and run this step again.")
+            cron = None
         if cron:
             current = subprocess.run(["crontab", "-l"], capture_output=True, text=True).stdout
             if current.strip() != cron.strip():
@@ -642,8 +682,13 @@ class ServicesStep(Step):
             if sys_states.get(u) == "disabled":
                 p.items.append(Item(f"unit:{u}", f"Enable system service {u}", "was enabled on the old machine", True, True,
                                     {"type": "unit", "unit": u}))
-        # Network connections
+        # Network connections (only where NetworkManager runs)
         keyfiles = ctx.recipe_files("network/system-connections")
+        if not shutil.which("nmcli"):
+            if keyfiles or any(it["path"].startswith("/etc/netplan/90-NM-") for it in ctx.read_json("etc/changed.json") or []):
+                p.notes.append("Wi-Fi/VPN connections are in the backup, but NetworkManager is not installed here; "
+                               "they were left out.")
+            return p
         current_nm = set(os.listdir("/etc/NetworkManager/system-connections")) if os.access(
             "/etc/NetworkManager/system-connections", os.R_OK) else set()
         for name, path in sorted(keyfiles.items()):
@@ -663,10 +708,21 @@ class ServicesStep(Step):
         return p
 
     def apply(self, ctx: Context, items: list[Item], out: Out) -> list[str]:
-        warnings = []
+        """Each kind of item is applied on its own: one failing part doesn't stop the others."""
+        warnings: list[str] = []
         by_type: dict[str, list[Item]] = {}
         for i in items:
             by_type.setdefault(i.data["type"], []).append(i)
+        for kind in ("group", "cron", "rootcron", "uunit", "unit", "nm", "netplan"):
+            if kind in by_type:
+                try:
+                    self._apply_kind(ctx, kind, by_type[kind], out, warnings)
+                except (DeucalionError, OSError) as e:
+                    warnings.append(f"{kind}: {e}")
+        return warnings
+
+    def _apply_kind(self, ctx: Context, kind: str, items: list[Item], out: Out, warnings: list[str]) -> None:
+        by_type = {kind: items}
         if "group" in by_type:
             res = ctx.priv().call("add_groups", user=by_type["group"][0].data["user"],
                                   groups=[i.data["group"] for i in by_type["group"]])
@@ -688,7 +744,10 @@ class ServicesStep(Step):
             out("Restored root's crontab" + (f" (the previous one is kept in {r['kept']})" if r.get("kept") else ""))
         if "uunit" in by_type:
             units = [i.data["unit"] for i in by_type["uunit"]]
-            r = subprocess.run(["systemctl", "--user", "enable", *units], capture_output=True, text=True)
+            try:
+                r = subprocess.run(["systemctl", "--user", "enable", *units], capture_output=True, text=True)
+            except OSError as e:
+                r = subprocess.CompletedProcess([], 1, "", str(e))
             if r.returncode:
                 warnings.append(f"Could not enable {', '.join(units)}: {r.stderr.strip()}")
         if "unit" in by_type:

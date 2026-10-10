@@ -32,10 +32,12 @@ class Privileged:
     def __init__(self, method: str | None = None):
         """method: 'pkexec', 'sudo', or 'direct' (tests / already root)."""
         if method is None:
+            desktop = bool(os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY"))
             if os.geteuid() == 0:
                 method = "direct"
-            elif shutil.which("pkexec") and (os.environ.get("DISPLAY") or os.environ.get("WAYLAND_DISPLAY")
-                                             or not sys.stdin.isatty()):
+            elif not desktop and _passwordless_sudo():
+                method = "sudo-n"   # e.g. a server or a cloud machine
+            elif shutil.which("pkexec") and (desktop or not sys.stdin.isatty()):
                 method = "pkexec"
             else:
                 method = "sudo"
@@ -56,6 +58,8 @@ class Privileged:
             cmd = ["pkexec"] + cmd
         elif self.method == "sudo":
             cmd = ["sudo", "--prompt=[Deucalion] administrator password for %u: "] + cmd
+        elif self.method == "sudo-n":
+            cmd = ["sudo", "-n"] + cmd
         self.proc = subprocess.Popen(cmd, stdin=subprocess.PIPE, stdout=subprocess.PIPE, text=True, bufsize=1)
         line = self.proc.stdout.readline()
         try:
@@ -66,11 +70,12 @@ class Privileged:
             self.proc.wait()
             self.proc = None
             raise DeucalionError("Administrator access was not granted.")
-        from .helper import HELPER_VERSION
-        if ready.get("version") != HELPER_VERSION:
+        import hashlib
+        bundled = hashlib.sha256(HELPER.read_bytes()).hexdigest()
+        if ready.get("sha256") != bundled:
             self.close()
-            raise DeucalionError("The installed administrator helper is out of date. Update it with: "
-                                 "./install.sh --system-helper (from the Deucalion folder)")
+            raise DeucalionError("The installed administrator helper does not match this version of Deucalion. "
+                                 "Update it with: ./install.sh --system-helper (from the Deucalion folder)")
 
     def call(self, op: str, on_progress: Callable[[str], None] | None = None, **args):
         self.start()
@@ -110,4 +115,11 @@ class Privileged:
 
     def __exit__(self, *exc):
         self.close()
+        return False
+
+
+def _passwordless_sudo() -> bool:
+    try:
+        return subprocess.run(["sudo", "-n", "true"], capture_output=True, timeout=10).returncode == 0
+    except (OSError, subprocess.TimeoutExpired):
         return False

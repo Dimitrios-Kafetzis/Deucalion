@@ -308,8 +308,12 @@ def _check_dir(path: str) -> str:
 def _run_streaming(cmd: list[str], emit) -> int:
     env = dict(os.environ, DEBIAN_FRONTEND="noninteractive", LC_ALL="C.UTF-8",
                PATH="/usr/sbin:/usr/bin:/sbin:/bin:/snap/bin")
-    p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
-                         text=True, errors="replace", env=env)
+    try:
+        p = subprocess.Popen(cmd, stdout=subprocess.PIPE, stderr=subprocess.STDOUT, stdin=subprocess.DEVNULL,
+                             text=True, errors="replace", env=env)
+    except FileNotFoundError:
+        emit(f"{cmd[0]} is not installed on this machine; skipped.")
+        return 127
     for line in p.stdout:
         emit(line.rstrip("\n"))
     return p.wait()
@@ -738,7 +742,9 @@ def serve() -> int:
         out.flush()
 
     os.umask(0o022)
-    send({"ready": True, "uid": os.geteuid(), "version": HELPER_VERSION})
+    with open(os.path.abspath(__file__), "rb") as f:
+        me = hashlib.sha256(f.read()).hexdigest()
+    send({"ready": True, "uid": os.geteuid(), "version": HELPER_VERSION, "sha256": me})
     for line in sys.stdin:
         try:
             req = json.loads(line)
