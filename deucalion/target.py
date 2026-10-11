@@ -139,10 +139,10 @@ class Target:
             "Plug it in and try again.")
 
     def register(self, cfg: Config, allow_internal: bool = False, make_default: bool = False) -> None:
-        cfg.setdefault("targets", {})[self.id] = {
-            "name": self.name, "path": str(self.root), "registered": now_iso(),
-            "allow_internal": allow_internal,
-        }
+        # Registering a known drive again keeps what else is known about it (e.g. how to unlock it).
+        entry = cfg.setdefault("targets", {}).setdefault(self.id, {})
+        entry.update({"name": self.name, "path": str(self.root), "registered": entry.get("registered") or now_iso(),
+                      "allow_internal": allow_internal or entry.get("allow_internal", False)})
         if make_default or not cfg.get("default_target"):
             cfg["default_target"] = self.id
         cfg.save()

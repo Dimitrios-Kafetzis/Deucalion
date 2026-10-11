@@ -154,11 +154,10 @@ class MainWindow(Adw.ApplicationWindow):
             ds = DriveSetup(cfg, out=lambda s: None)
             try:
                 if access.get("method", "none") == "none":
-                    from ..util import run
+                    from ..util import mount_info
                     root = self.state.target.root if self.state.target else None
                     if root is not None:
-                        src = run(["findmnt", "-rno", "SOURCE", "--target", str(root)]).stdout.strip()
-                        ds.u.unmount(ds.u.resolve(src))
+                        ds.u.unmount(ds.u.resolve(mount_info(root).get("source", "")))
                 else:
                     ds.close_access(access)
             finally:

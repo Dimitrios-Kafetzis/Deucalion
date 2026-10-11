@@ -84,6 +84,19 @@ def mount_info(path: str | os.PathLike) -> dict:
     return fs[0] if fs else {}
 
 
+# Where desktops mount removable drives.
+REMOVABLE_MOUNTS = ("/media/", "/run/media/", "/mnt/")
+
+
+def mount_points(source: str | None = None) -> list[str]:
+    """Mount points of every filesystem, or of one device. Uses findmnt's JSON output: its other
+    formats write spaces in paths as '\\x20' (a drive named 'Alex Backup')."""
+    res = run(["findmnt", "-J", "-l", "-o", "TARGET"] + (["--source", source] if source else []))
+    if res.returncode != 0 or not res.stdout.strip():
+        return []
+    return [fs["target"] for fs in json.loads(res.stdout).get("filesystems", [])]
+
+
 def fs_type(path: str | os.PathLike) -> str:
     return mount_info(path).get("fstype", "unknown")
 

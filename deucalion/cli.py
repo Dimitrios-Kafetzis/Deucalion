@@ -23,7 +23,10 @@ from .privileged import Privileged
 from .logs import close_run_log, open_run_log
 from .restore import Restorer
 from .target import Target
-from .util import DeucalionError, fs_type, human_duration, human_size, is_encrypted, plural, run
+from .util import (REMOVABLE_MOUNTS, DeucalionError, fs_type, human_duration, human_size, is_encrypted, mount_info,
+                   plural, run)
+
+_REMOVABLE_MOUNTS = REMOVABLE_MOUNTS
 from .verify import verify
 
 # --------------------------------------------------------------------------------------------
@@ -919,12 +922,11 @@ def cmd_close(cfg: Config, args) -> int:
     ds = drivesetup.DriveSetup(cfg, out=lambda s: print(dim(f"  {s}")))
     try:
         if access.get("method", "none") == "none":
-            root = Path(entry["path"])
-            mp = run(["findmnt", "-rno", "TARGET", "--target", str(root)]).stdout.strip()
-            if not mp or not mp.startswith(("/media/", "/run/media/", "/mnt/")):
+            info = mount_info(entry["path"]) if os.path.exists(entry["path"]) else {}
+            mp, src = info.get("target", ""), info.get("source", "")
+            if not mp or not mp.startswith(_REMOVABLE_MOUNTS):
                 print("The backup drive is not mounted.")
                 return 0
-            src = run(["findmnt", "-rno", "SOURCE", mp]).stdout.strip()
             ds.u.unmount(ds.u.resolve(src))
         else:
             ds.close_access(access)

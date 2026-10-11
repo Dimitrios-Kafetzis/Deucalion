@@ -28,7 +28,8 @@ from . import __version__
 from .config import Config, state_dir
 from .target import BACKUP_DIRNAME, Target, _drive_info
 from .udisks import GPT_DATA, GPT_LINUX, UDisks
-from .util import DeucalionError, backing_disks, mount_info, read_json, run, write_json_atomic
+from .util import (REMOVABLE_MOUNTS, DeucalionError, backing_disks, mount_info, mount_points, read_json, run,
+                   write_json_atomic)
 
 LAYOUTS = {
     "encrypt-all": "Encrypt the whole drive",
@@ -492,8 +493,8 @@ def plain_root_of(cfg: Config, target: Target) -> Path | None:
     if access.get("plain_uuid"):
         dev = Path("/dev/disk/by-uuid") / access["plain_uuid"]
         if dev.exists():
-            mp = run(["findmnt", "-rno", "TARGET", str(dev.resolve())]).stdout.strip().splitlines()
-            return Path(mp[0]) if mp else None
+            mps = mount_points(str(dev.resolve()))
+            return Path(mps[0]) if mps else None
     return None
 
 
@@ -507,9 +508,11 @@ def discover() -> list[tuple[Path, dict]]:
     return found
 
 
+_REMOVABLE_MOUNTS = REMOVABLE_MOUNTS
+
+
 def _mounted_roots() -> list[Path]:
-    res = run(["findmnt", "-rno", "TARGET"])
-    return [Path(m) for m in res.stdout.split() if m.startswith(("/media/", "/run/media/", "/mnt/"))]
+    return [Path(m) for m in mount_points() if m.startswith(_REMOVABLE_MOUNTS)]
 
 
 def target_root_for(mountpoint: str) -> Path | None:
