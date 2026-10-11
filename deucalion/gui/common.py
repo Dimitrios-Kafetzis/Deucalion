@@ -84,8 +84,8 @@ def alert(parent, heading: str, body: str = "", responses=(("ok", "OK"),), defau
 
 
 def ask_password(parent, heading: str, body: str, callback: Callable[[str | None], None]) -> None:
-    entry = Gtk.PasswordEntry(show_peek_icon=True, activates_default=True)
-    entry.set_placeholder_text("Password")
+    # (PasswordEntry has the property but no set_placeholder_text() method)
+    entry = Gtk.PasswordEntry(show_peek_icon=True, activates_default=True, placeholder_text="Password")
 
     def done(response):
         callback(entry.get_text() if response == "unlock" else None)
