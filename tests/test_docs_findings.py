@@ -116,3 +116,39 @@ class MountPointsWithSpaces(Base):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+PPA_SOURCES = """Types: deb
+URIs: https://ppa.launchpadcontent.net/git-core/ppa/ubuntu/
+Suites: noble
+Components: main
+Signed-By: 
+ -----BEGIN PGP PUBLIC KEY BLOCK-----
+ .
+ mQINBGYo2OYBEADVRjI+o29u9izslaVr0Xqj8hpmo/2su/Iey1PgoS6A3hMxR4R4
+ eZ3u9dRh/gRHXNjxqRMfKj88G6ciqa/7ty8Vfc1eKl3z7yjL1pWOEzcGLKaSB8qd
+ =abcd
+ -----END PGP PUBLIC KEY BLOCK-----
+"""
+
+
+class InlineSigningKeys(unittest.TestCase):
+    """add-apt-repository on Ubuntu 24.04+ writes a PPA's key inside its .sources file. A rebuild used
+    to restore the source without it, so apt refused the PPA ('… is not signed')."""
+
+    def test_render_keeps_the_inline_key(self):
+        from deucalion import aptsources
+        [repo] = aptsources.parse(PPA_SOURCES, "git-core-ubuntu-ppa-noble.sources")
+        out = aptsources.render(repo, ["resolute"])
+        key_lines = [l for l in PPA_SOURCES.splitlines() if l.startswith(" ")]
+        self.assertIn("Signed-By:\n" + "\n".join(key_lines) + "\n", out)
+        self.assertIn("Suites: resolute\n", out)
+        # and it reads back the same
+        [again] = aptsources.parse(out, "x.sources")
+        self.assertEqual(aptsources.render(again, ["resolute"]), out)
+
+    def test_inline_key_is_still_recognised_as_a_ppa(self):
+        from deucalion import aptsources
+        [repo] = aptsources.parse(PPA_SOURCES, "git-core-ubuntu-ppa-noble.sources")
+        self.assertEqual(repo.kind, "ppa")
+        self.assertEqual(repo.signed_by, "(inline key)")

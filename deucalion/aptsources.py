@@ -25,6 +25,7 @@ class Repo:
     options: dict = field(default_factory=dict)
     enabled: bool = True
     name: str = ""
+    inline_key: str = ""        # deb822 'Signed-By:' holding the key itself (add-apt-repository, 24.04+)
 
     @property
     def kind(self) -> str:
@@ -123,14 +124,15 @@ def parse_deb822(text: str, file: str) -> list[Repo]:
         if "uris" not in fields:
             continue
         signed = fields.get("signed-by", "")
+        inline = ""
         if "\n" in signed or signed.startswith("-----BEGIN"):
-            signed = "(inline key)"
+            signed, inline = "(inline key)", signed
         opts = {k: v for k, v in fields.items()
                 if k not in ("types", "uris", "suites", "components", "signed-by", "enabled", "x-repolib-name")}
         repos.append(Repo(file, "deb822", fields.get("types", "deb").split(), fields["uris"].split(),
                           fields.get("suites", "").split(), fields.get("components", "").split(),
                           signed, opts, fields.get("enabled", "yes").lower() != "no",
-                          fields.get("x-repolib-name", "")))
+                          fields.get("x-repolib-name", ""), inline))
     return repos
 
 
@@ -157,7 +159,10 @@ def render(repo: Repo, suites: list[str]) -> str:
             lines.append(f"Components: {' '.join(repo.components)}")
         for k, v in repo.options.items():
             lines.append(f"{k.title()}: {v}")
-        if repo.signed_by and repo.signed_by != "(inline key)":
+        if repo.inline_key:  # the key itself, as continuation lines (' .' stands for an empty line)
+            first, *rest = repo.inline_key.split("\n")
+            lines.append(f"Signed-By: {first}".rstrip() + "".join(f"\n {l}" for l in rest))
+        elif repo.signed_by:
             lines.append(f"Signed-By: {repo.signed_by}")
         if not repo.enabled:
             lines.append("Enabled: no")
