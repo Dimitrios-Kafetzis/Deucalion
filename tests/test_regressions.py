@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Regression tests for issues found in review."""
 
 import os

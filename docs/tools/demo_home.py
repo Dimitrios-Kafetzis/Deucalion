@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """Runs INSIDE the documentation VM: fills the demo user's home folder with realistic but
 fictional files (including the awkward names Deucalion has to handle), and an extra folder
 outside the home folder. Everything is generated; the same seed gives the same files."""

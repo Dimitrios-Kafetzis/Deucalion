@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Shared GUI helpers: background work, dialogs, small widget builders, app state."""
 
 from __future__ import annotations

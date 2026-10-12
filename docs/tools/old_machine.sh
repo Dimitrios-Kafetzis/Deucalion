@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 # Runs INSIDE the documentation VM ("Alex's laptop", Ubuntu 24.04) before the first full backup:
 # gives the machine a few things a real desktop has, so the system recipe and the rebuild steps
 # have something to show. Everything here is fictional demo setup.

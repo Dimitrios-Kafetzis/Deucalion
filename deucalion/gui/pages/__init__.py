@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """The app's pages, one module each."""
 
 from .backup import BackupPage

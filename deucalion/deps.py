@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Check (and install) what Deucalion needs.
 
 Ubuntu packages are installed with apt. VeraCrypt is not in Ubuntu's repositories: its

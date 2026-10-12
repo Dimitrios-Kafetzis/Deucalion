@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """Throwaway Ubuntu virtual machines for the documentation (screenshots, real command output,
 rebuild walk-throughs). Nothing here touches a real drive: the demo drives are image files that
 the VM sees as USB drives.

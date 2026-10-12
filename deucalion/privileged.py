@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Talk to the administrator helper (helper.py), started once with pkexec or sudo,
 so the password is asked only once per task."""
 

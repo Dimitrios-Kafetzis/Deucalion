@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """VeraCrypt checks (one administrator prompt). Run by hand:
     python3 tests/manual/veracrypt_checks.py /media/$USER/<exFAT test drive>
 Creates throwaway disk images next to this run's work folder; never touches real drives."""

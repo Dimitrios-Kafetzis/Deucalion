@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """Make every screenshot and every piece of command output in the documentation, from scratch.
 
     python3 docs/tools/screenshots.py                   # everything, from scratch (about an hour)

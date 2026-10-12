@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """A backup target: the Deucalion-Backup folder on an external drive."""
 
 from __future__ import annotations

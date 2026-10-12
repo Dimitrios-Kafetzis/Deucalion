@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """Runs INSIDE a throwaway VM: rebuild it from a test backup, then check that nothing local was
 lost, everything was restored, and a second run is harmless.
     python3 vm_rebuild_check.py /mnt/backup"""

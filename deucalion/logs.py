@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Per-run log files, written both on the drive and on this machine."""
 
 from __future__ import annotations

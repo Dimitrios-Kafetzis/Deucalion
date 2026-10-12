@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """A small UDisks2 client (Ubuntu's disk service), used to partition, format, encrypt
 (LUKS), unlock and mount drives *without* administrator rights: UDisks allows the
 logged-in user to do this on removable, non-system drives."""

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Restore files and folders from the backup.
 
 Restoring is planned first (what will be created, what will be overwritten),

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Read apt repository definitions (one-line .list and deb822 .sources files),
 adapt them to a new Ubuntu release, and check that they still exist."""
 

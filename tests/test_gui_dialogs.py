@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """The app's dialogs, run for real with GTK's Broadway backend (nothing appears on screen).
 
 Skipped where GTK 4 / libadwaita or gtk4-broadwayd are not installed."""

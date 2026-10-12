@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """The documentation's screenshot mode: how DEUCALION_SCREENSHOT_PAGES entries are read."""
 
 import unittest

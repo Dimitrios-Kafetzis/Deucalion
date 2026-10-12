@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """The "old laptop" part of the documentation: Alex (Ubuntu 24.04) installs Deucalion, sets up a
 backup drive, backs up, restores, and looks after the backup. Every step is real; the screenshots
 and terminal output in the docs come from here.

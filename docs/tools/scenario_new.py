@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """The "new laptop" part of the documentation: Alex installs Ubuntu 26.04 on a new computer (user
 alexk this time), plugs in the backup drive from the old laptop, and rebuilds the computer with
 Deucalion run from the drive's Deucalion-Tool folder: once in the app (VM 1), once in a terminal

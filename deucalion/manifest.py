@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """The manifest: a SQLite database on the drive that records, for every backed-up
 item, its original name and Linux metadata (permissions, owner, symlink target,
 timestamps, checksum) and where it is stored on the drive.

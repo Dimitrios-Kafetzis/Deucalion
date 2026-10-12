@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Drives: the registered backup drives, connected drives, and the drive setup wizard."""
 
 from __future__ import annotations

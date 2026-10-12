@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Rebuild: the new-machine wizard, one page per step, each with a review before applying."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Removed Files: old versions and deleted files kept on the drive, until the user empties them."""
 
 from __future__ import annotations

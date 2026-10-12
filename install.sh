@@ -1,4 +1,6 @@
 #!/bin/bash
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 # Install Deucalion for the current user (no administrator rights needed):
 #   ~/.local/share/deucalion        the program
 #   ~/.local/bin/deucalion          the command
@@ -50,7 +52,7 @@ echo
 echo "Installing Deucalion into $DEST"
 rm -rf "$DEST.new"
 mkdir -p "$DEST.new"
-cp -r "$SRC/deucalion" "$SRC/bin" "$SRC/data" "$SRC/README.md" "$DEST.new/"
+cp -r "$SRC/deucalion" "$SRC/bin" "$SRC/data" "$SRC/README.md" "$SRC/LICENSE" "$DEST.new/"
 find "$DEST.new" -name __pycache__ -type d -prune -exec rm -rf {} +
 rm -rf "$DEST"
 mv "$DEST.new" "$DEST"

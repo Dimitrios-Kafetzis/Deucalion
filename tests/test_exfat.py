@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Runs the whole backup/restore suite against a real exFAT filesystem.
 
 Set DEUCALION_TEST_EXFAT to the mount point of an exFAT test volume, e.g. a

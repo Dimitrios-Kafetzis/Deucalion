@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """Checks that need the administrator password (one prompt). Run by hand:
     python3 tests/manual/admin_checks.py /media/$USER/<test drive>
 They never change the system: the backup goes to the given test drive, and every request

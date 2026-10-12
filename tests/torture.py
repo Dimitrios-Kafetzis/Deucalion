@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """Randomized torture test of Deucalion's data-safety guarantees.
 
 It builds a random home folder full of awkward cases (odd names, case twins, symlinks,

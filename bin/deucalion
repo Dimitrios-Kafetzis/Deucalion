@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """Run Deucalion from wherever this folder is (e.g. straight from the backup drive)."""
 import os
 import sys

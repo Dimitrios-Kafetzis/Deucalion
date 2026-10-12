@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """User configuration, stored as JSON in ~/.config/deucalion/config.json."""
 
 from __future__ import annotations

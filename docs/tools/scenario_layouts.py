@@ -1,4 +1,6 @@
 #!/usr/bin/env python3
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
 """Every drive layout, set up for real in the app and from the command line, on demo USB drives
 (image files). Also how to open an encrypted backup without Deucalion.
 

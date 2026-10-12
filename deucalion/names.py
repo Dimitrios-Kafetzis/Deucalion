@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """File names that are safe to store on exFAT (and readable on Windows/macOS).
 
 The original name is always kept in the manifest, so encoding is only about

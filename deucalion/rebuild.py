@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Rebuild a machine from a backup: the new-machine wizard.
 
 Each step first *plans* (reads the backup and this machine, changes nothing),

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """The Deucalion app: main window with a sidebar of pages."""
 
 from __future__ import annotations
@@ -256,8 +259,9 @@ class DeucalionApp(Adw.Application):
         about = Adw.AboutDialog(application_name="Deucalion", application_icon=APP_ID, version=__version__,
                                 developer_name="Dimitrios Kafetzis",
                                 website="https://github.com/Dimitrios-Kafetzis/Deucalion",
+                                issue_url="https://github.com/Dimitrios-Kafetzis/Deucalion/issues",
                                 comments="Back up your Ubuntu machine to an external drive, and rebuild it later.",
-                                license_type=Gtk.License.CUSTOM)
+                                license_type=Gtk.License.GPL_3_0)
         about.present(self.window)
 
 

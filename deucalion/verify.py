@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Check that the backup on the drive is complete and undamaged."""
 
 from __future__ import annotations

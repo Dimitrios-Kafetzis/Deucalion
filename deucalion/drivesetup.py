@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Prepare a backup drive (format, encrypt) and open or close an encrypted backup.
 
 Layouts
@@ -453,7 +456,7 @@ def install_tool_copy(plain_root: Path, target: Target | None, access: dict) -> 
     ignore = shutil.ignore_patterns("__pycache__", "*.pyc", ".git", "tests", "*.img")
     shutil.copytree(src / "deucalion", tmp / "deucalion", ignore=ignore)
     shutil.copytree(src / "bin", tmp / "bin", ignore=ignore)
-    for extra in ("README.md",):  # not docs/: the website source and its screenshots
+    for extra in ("README.md", "LICENSE"):  # not docs/: the website source and its screenshots
         p = src / extra
         if p.is_dir():
             shutil.copytree(p, tmp / extra, ignore=ignore)

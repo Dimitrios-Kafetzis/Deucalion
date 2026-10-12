@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Small helpers shared by the engine, the CLI and (later) the GUI."""
 
 from __future__ import annotations

@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Drive setup tests.
 
 The LUKS tests use a disk image attached through UDisks, which needs a desktop session.
@@ -43,6 +46,7 @@ class PureTest(unittest.TestCase):
         drivesetup.install_tool_copy(tmp, None, {"method": "none"})
         self.assertTrue((tmp / "Deucalion-Tool/bin/deucalion").exists())
         self.assertTrue((tmp / "Deucalion-Tool/deucalion/cli.py").exists())
+        self.assertTrue((tmp / "Deucalion-Tool/LICENSE").exists())
         self.assertFalse(list((tmp / "Deucalion-Tool").rglob("__pycache__")))
         out = subprocess.run([str(tmp / "Deucalion-Tool/bin/deucalion"), "--version"], capture_output=True, text=True)
         self.assertIn("Deucalion", out.stdout)

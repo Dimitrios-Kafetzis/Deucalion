@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Helpers shared by the documentation scenarios (they run on this computer and drive a VM)."""
 
 from __future__ import annotations

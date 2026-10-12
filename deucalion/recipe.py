@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """The system recipe: what makes this Ubuntu installation yours, saved as readable
 text files so it can be replayed on a new machine or a newer Ubuntu release.
 

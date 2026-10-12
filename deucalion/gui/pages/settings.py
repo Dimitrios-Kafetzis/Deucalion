@@ -1,3 +1,6 @@
+# SPDX-License-Identifier: GPL-3.0-or-later
+# Copyright (C) 2026 Dimitrios Kafetzis
+
 """Settings: what to leave out, extra folders, backup options."""
 
 from __future__ import annotations
