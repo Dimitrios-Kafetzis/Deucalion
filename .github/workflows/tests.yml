@@ -39,6 +39,9 @@ jobs:
           sudo apt-get install -y -q python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 exfatprogs gnupg
       - name: Create and mount an exFAT disk image
         run: |
+          # the runner's kernel ships its exFAT driver separately
+          sudo apt-get install -y -q "linux-modules-extra-$(uname -r)"
+          sudo modprobe exfat
           truncate -s 2G "$RUNNER_TEMP/exfat.img"
           mkfs.exfat -L TEST "$RUNNER_TEMP/exfat.img"
           sudo mkdir -p /mnt/exfat
