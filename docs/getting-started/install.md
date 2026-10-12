@@ -2,7 +2,7 @@
 
 **What you'll do:** download Deucalion and run its installer, which checks what your computer
 needs, installs anything missing, and adds Deucalion to your app menu.<br>
-**What you need:** Ubuntu 22.04 or newer, an internet connection, your administrator password.<br>
+**What you need:** Ubuntu 24.04 or newer (22.04 for the command line only), an internet connection, your administrator password.<br>
 **How long it takes:** about 5 minutes.
 
 The installer is a command you run once in a terminal. If you have never used a terminal, see
@@ -51,6 +51,11 @@ The `…` line stands for many lines of installation output from Ubuntu's packag
 
 **What you have now:** Deucalion in your app menu (search for "Deucalion") and the `deucalion`
 command in the terminal.
+
+!!! note "On Ubuntu 22.04"
+    The app needs Ubuntu 24.04 or newer. On 22.04 the installer says *"No app menu entry: The app needs
+    Ubuntu 24.04 or newer …"* and installs only the `deucalion` command, which does everything the app
+    does. See the [command line](../cli/index.md).
 
 !!! note "If `deucalion` says *command not found* right after installing"
     On a computer where nothing was installed this way before, Ubuntu adds the folder that holds the

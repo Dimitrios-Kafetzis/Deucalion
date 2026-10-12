@@ -3,7 +3,7 @@
 
 """The app's dialogs, run for real with GTK's Broadway backend (nothing appears on screen).
 
-Skipped where GTK 4 / libadwaita or gtk4-broadwayd are not installed."""
+Skipped where GTK 4 / libadwaita 1.5+ or gtk4-broadwayd are not installed."""
 
 import os
 import shutil
@@ -41,12 +41,13 @@ def _free_display() -> str:
 def _gtk_available() -> bool:
     if not shutil.which("gtk4-broadwayd"):
         return False
-    probe = "import gi; gi.require_version('Gtk', '4.0'); gi.require_version('Adw', '1')"
-    env = {k: v for k, v in os.environ.items() if k not in SNAP_VARS}
-    return subprocess.run([sys.executable, "-c", probe], env=env, capture_output=True).returncode == 0
+    probe = ("import sys; sys.path.insert(0, sys.argv[1]); from deucalion.cli import app_problem; "
+             "sys.exit(app_problem() is not None)")  # also libadwaita 1.5 or newer
+    env = _env("0")  # importing libadwaita needs no display
+    return subprocess.run([sys.executable, "-c", probe, str(REPO)], env=env, capture_output=True).returncode == 0
 
 
-@unittest.skipUnless(_gtk_available(), "GTK 4 / libadwaita / gtk4-broadwayd not available")
+@unittest.skipUnless(_gtk_available(), "GTK 4 / libadwaita 1.5+ / gtk4-broadwayd not available")
 class PasswordDialog(unittest.TestCase):
     def test_unlock_dialog_opens(self):
         """Regression: the Unlock dialog crashed (PasswordEntry has no set_placeholder_text), so no

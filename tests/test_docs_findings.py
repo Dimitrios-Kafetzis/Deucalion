@@ -155,3 +155,35 @@ class InlineSigningKeys(unittest.TestCase):
         [repo] = aptsources.parse(PPA_SOURCES, "git-core-ubuntu-ppa-noble.sources")
         self.assertEqual(repo.kind, "ppa")
         self.assertEqual(repo.signed_by, "(inline key)")
+
+
+def fake_gi(adw_version: tuple[int, int]) -> dict:
+    """sys.modules entries for a PyGObject whose libadwaita has this version."""
+    adw = mock.Mock(get_major_version=lambda: adw_version[0], get_minor_version=lambda: adw_version[1])
+    gi = mock.Mock(require_version=lambda *a: None)
+    gi.repository = mock.Mock(Adw=adw)
+    return {"gi": gi, "gi.repository": gi.repository}
+
+
+class AppNeedsNewLibadwaita(unittest.TestCase):
+    """The app uses libadwaita 1.5 widgets, so on Ubuntu 22.04 (libadwaita 1.1) it crashed with a
+    traceback. It now says what is needed, and points to the command line."""
+
+    def test_old_libadwaita_gives_a_clear_message_instead_of_starting(self):
+        err = io.StringIO()
+        with mock.patch.dict("sys.modules", fake_gi((1, 1))), contextlib.redirect_stderr(err), \
+                mock.patch.dict("sys.modules", {"deucalion.gui.app": None}):  # importing the app would fail
+            self.assertEqual(cli.cmd_gui(None, argparse.Namespace()), 1)
+        self.assertIn("Ubuntu 24.04 or newer", err.getvalue())
+        self.assertIn("this computer has 1.1", err.getvalue())
+        self.assertIn("deucalion --help", err.getvalue())
+
+    def test_libadwaita_1_5_is_enough(self):
+        with mock.patch.dict("sys.modules", fake_gi((1, 5))):
+            self.assertIsNone(cli.app_problem())
+        with mock.patch.dict("sys.modules", fake_gi((1, 7))):
+            self.assertIsNone(cli.app_problem())
+
+    def test_missing_pygobject_names_the_packages(self):
+        with mock.patch.dict("sys.modules", {"gi": None}):
+            self.assertIn("gir1.2-adw-1", cli.app_problem())

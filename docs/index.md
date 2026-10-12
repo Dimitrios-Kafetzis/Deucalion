@@ -27,7 +27,7 @@ typing commands in a terminal. Both do the same things.
 
 ## Who it is for
 
-Anyone with an Ubuntu computer (Ubuntu 22.04 or newer) and an external drive, such as a USB hard disk
+Anyone with an Ubuntu computer (Ubuntu 24.04 or newer; on 22.04, from the command line) and an external drive, such as a USB hard disk
 or SSD. You don't need to know how to use a terminal: every task can be done in the app, and every
 tutorial shows the app first.
 

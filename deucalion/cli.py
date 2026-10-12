@@ -970,13 +970,33 @@ def cmd_deps(cfg, args) -> int:
     return 0
 
 
-def cmd_gui(cfg, args) -> int:
+APP_MIN_ADW = (1, 5)  # Adw.AlertDialog, Adw.AboutDialog: libadwaita 1.5 (Ubuntu 24.04)
+
+
+def app_problem() -> str | None:
+    """Why the app can't start on this computer, or None if it can."""
     try:
-        from .gui.app import run_gui
+        import gi
+        gi.require_version("Gtk", "4.0")
+        gi.require_version("Adw", "1")
+        from gi.repository import Adw
     except (ImportError, ValueError) as e:
-        print(red(f"The app can't start ({e}). The python3-gi, gir1.2-gtk-4.0 and gir1.2-adw-1 packages are "
-                  "needed."), file=sys.stderr)
+        return (f"The app can't start ({e}). The python3-gi, gir1.2-gtk-4.0 and gir1.2-adw-1 packages are "
+                "needed.")
+    have = (Adw.get_major_version(), Adw.get_minor_version())
+    if have < APP_MIN_ADW:
+        return (f"The app needs Ubuntu 24.04 or newer (libadwaita {APP_MIN_ADW[0]}.{APP_MIN_ADW[1]}; this computer "
+                f"has {have[0]}.{have[1]}). Everything also works from the terminal: run 'deucalion --help' "
+                "to see the commands.")
+    return None
+
+
+def cmd_gui(cfg, args) -> int:
+    problem = app_problem()
+    if problem:
+        print(red(problem), file=sys.stderr)
         return 1
+    from .gui.app import run_gui
     return run_gui()
 
 

@@ -90,6 +90,8 @@ Ubuntu version and installing packages.
 
 ## Which Ubuntu versions does it work on?
 
-Ubuntu 22.04 or newer (Python 3.10 or newer). It was tested on Ubuntu 24.04 and 26.04. A rebuild works
+The app needs **Ubuntu 24.04 or newer**. The command line works on **Ubuntu 22.04 or newer** (Python
+3.10 or newer), so on 22.04 you can do everything with [commands](../cli/index.md). It was tested by
+hand on Ubuntu 24.04 and 26.04, and its automated tests run on 22.04 and 24.04. A rebuild works
 from an older Ubuntu version to a newer one (for example 24.04 → 26.04); it also works onto the same
 version.

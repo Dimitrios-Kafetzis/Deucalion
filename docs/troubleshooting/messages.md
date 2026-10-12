@@ -293,6 +293,11 @@ See the table of messages in [`setup-drive`](../cli/setup-drive.md#what-it-needs
 
 - **Fix:** `deucalion deps --install`.
 
+### "The app needs Ubuntu 24.04 or newer (libadwaita 1.5; this computer has 1.1). Everything also works from the terminal: run 'deucalion --help' to see the commands."
+
+- **Means:** this Ubuntu version (for example 22.04) is too old for the app.
+- **Fix:** use the [command line](../cli/index.md), or upgrade Ubuntu.
+
 ### "deucalion: command not found"
 
 - **Fix:** right after the first installation, log out and back in once; or use `~/.local/bin/deucalion`.

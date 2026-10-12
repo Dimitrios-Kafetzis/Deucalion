@@ -60,12 +60,24 @@ mv "$DEST.new" "$DEST"
 mkdir -p "$BIN"
 ln -sf "$DEST/bin/deucalion" "$BIN/deucalion"
 
-mkdir -p "$DATA/applications" "$DATA/icons/hicolor/scalable/apps" "$DATA/icons/hicolor/symbolic/apps"
-sed "s|^Exec=.*|Exec=$BIN/deucalion|" "$SRC/data/$APP_ID.desktop" > "$DATA/applications/$APP_ID.desktop"
-cp "$SRC/data/icons/hicolor/scalable/apps/$APP_ID.svg" "$DATA/icons/hicolor/scalable/apps/"
-cp "$SRC/data/icons/hicolor/symbolic/apps/$APP_ID-symbolic.svg" "$DATA/icons/hicolor/symbolic/apps/"
-command -v update-desktop-database >/dev/null && update-desktop-database "$DATA/applications" 2>/dev/null || true
-command -v gtk4-update-icon-cache >/dev/null && gtk4-update-icon-cache -q -t "$DATA/icons/hicolor" 2>/dev/null || true
+# The app menu entry only where the app can run (it needs Ubuntu 24.04 or newer)
+# (without the GTK variables that some sandboxed terminals set, such as the VS Code snap's; if the
+# check itself fails, add the entry as before)
+APP_PROBLEM="$(env -u GSETTINGS_SCHEMA_DIR -u GTK_PATH -u GTK_EXE_PREFIX -u GIO_MODULE_DIR -u GTK_IM_MODULE_FILE \
+    -u GDK_PIXBUF_MODULE_FILE -u GDK_PIXBUF_MODULEDIR -u LOCPATH python3 -c \
+    'import sys; sys.path.insert(0, sys.argv[1]); from deucalion.cli import app_problem; print(app_problem() or "")' \
+    "$DEST" 2>/dev/null)" || APP_PROBLEM=""
+if [[ -z "$APP_PROBLEM" ]]; then
+    mkdir -p "$DATA/applications" "$DATA/icons/hicolor/scalable/apps" "$DATA/icons/hicolor/symbolic/apps"
+    sed "s|^Exec=.*|Exec=$BIN/deucalion|" "$SRC/data/$APP_ID.desktop" > "$DATA/applications/$APP_ID.desktop"
+    cp "$SRC/data/icons/hicolor/scalable/apps/$APP_ID.svg" "$DATA/icons/hicolor/scalable/apps/"
+    cp "$SRC/data/icons/hicolor/symbolic/apps/$APP_ID-symbolic.svg" "$DATA/icons/hicolor/symbolic/apps/"
+    command -v update-desktop-database >/dev/null && update-desktop-database "$DATA/applications" 2>/dev/null || true
+    command -v gtk4-update-icon-cache >/dev/null && gtk4-update-icon-cache -q -t "$DATA/icons/hicolor" 2>/dev/null || true
+else
+    rm -f "$DATA/applications/$APP_ID.desktop"
+    echo "No app menu entry: $APP_PROBLEM"
+fi
 
 if [[ -e "$HELPER_DIR/helper.py" ]] && ! cmp -s "$SRC/deucalion/helper.py" "$HELPER_DIR/helper.py"; then
     echo "The installed administrator helper is from another version; updating it too."
@@ -82,4 +94,8 @@ case ":$PATH:" in
     *":$BIN:"*) ;;
     *) echo "Note: add $BIN to your PATH to run 'deucalion' from a terminal." ;;
 esac
-echo "Done. Open Deucalion from the app menu, or run: deucalion"
+if [[ -z "$APP_PROBLEM" ]]; then
+    echo "Done. Open Deucalion from the app menu, or run: deucalion"
+else
+    echo "Done. Run 'deucalion --help' to see the commands."
+fi

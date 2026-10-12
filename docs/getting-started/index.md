@@ -8,7 +8,8 @@ Two short pages get you from nothing to a first backup:
 
 ## What you need
 
-- A computer with **Ubuntu 22.04 or newer** (the Ubuntu Desktop, as installed from ubuntu.com).
+- A computer with **Ubuntu 24.04 or newer** (the Ubuntu Desktop, as installed from ubuntu.com). On
+  Ubuntu 22.04, Deucalion works from the command line only.
 - An **external drive** with enough space for your home folder: a USB hard disk or SSD. A drive
   twice the size of your home folder leaves room for old versions of files.
 - An **internet connection** for the installation.
