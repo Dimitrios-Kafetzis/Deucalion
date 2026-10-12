@@ -50,7 +50,7 @@ echo
 echo "Installing Deucalion into $DEST"
 rm -rf "$DEST.new"
 mkdir -p "$DEST.new"
-cp -r "$SRC/deucalion" "$SRC/bin" "$SRC/data" "$SRC/README.md" "$SRC/docs" "$DEST.new/"
+cp -r "$SRC/deucalion" "$SRC/bin" "$SRC/data" "$SRC/README.md" "$DEST.new/"
 find "$DEST.new" -name __pycache__ -type d -prune -exec rm -rf {} +
 rm -rf "$DEST"
 mv "$DEST.new" "$DEST"
