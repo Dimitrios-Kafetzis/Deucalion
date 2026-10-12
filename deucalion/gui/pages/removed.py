@@ -2,7 +2,7 @@
 
 from __future__ import annotations
 
-from ..common import (Adw, Gtk, alert, button, clear, group_add, label, open_folder, page_with_header, row,
+from ..common import (Adw, GLib, Gtk, alert, button, clear, group_add, label, open_folder, page_with_header, row,
                       run_async, stamp_to_text, toast)
 from ...util import human_size, plural
 
@@ -66,6 +66,21 @@ class RemovedPage:
             group_add(self.group, r)
         self._update()
         self.stack.set_visible_child_name("list")
+
+    # Screenshot mode only (the documentation). The list loads in the background each time the page is
+    # shown, so these wait for it before ticking.
+    def screenshot_tick(self, n: str = "1", then=None):
+        """Tick the first N groups (newest first, as shown)."""
+        def tick():
+            for c in list(self.checks.values())[:int(n)]:
+                c.set_active(True)
+            if then:
+                then()
+            return False
+        GLib.timeout_add(1500, tick)
+
+    def screenshot_delete(self, n: str = "1"):
+        self.screenshot_tick(n, then=self._delete)
 
     def _update(self):
         self.delete_btn.set_sensitive(any(c.get_active() for c in self.checks.values()))

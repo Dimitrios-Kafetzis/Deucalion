@@ -109,6 +109,7 @@ class RebuildPage:
 
     def open_step(self, step: rebuild.Step):
         page = StepPage(self, step)
+        self.current_step = page
         self.nav.push(page.page)
         page.load()
 
@@ -119,10 +120,54 @@ class RebuildPage:
         if idx + 1 < len(rebuild.STEPS):
             self.open_step(rebuild.STEPS[idx + 1])
 
-    def screenshot_step(self):
-        """Developer aid for screenshots."""
+    # Screenshot mode only (the documentation): each one does what a click would do.
+    def screenshot_step(self, number: str = "7"):
+        """Open step N (1-8) and show its plan."""
         if self.ctx:
-            self.open_step(rebuild.STEPS[6])
+            self.nav.pop_to_tag("root")
+            self.open_step(rebuild.STEPS[int(number) - 1])
+
+    def screenshot_root(self):
+        self.nav.pop_to_tag("root")
+        if self.ctx:
+            self._fill_steps()
+
+    def screenshot_diff(self, n: str = "1"):
+        """'Show Changes' for the Nth selectable item of the open /etc step."""
+        page = self.current_step
+        page._diff(page.plan.actionable[int(n) - 1])
+
+    def screenshot_tick(self, keys: str):
+        """Select only these items (keys separated by '|', or 'all'/'none') on the open step."""
+        page = self.current_step
+        wanted = set(keys.split("|"))
+        for it in page.plan.actionable:
+            it.selected = keys == "all" or (keys != "none" and (it.key in wanted or it.label in wanted))
+        page._show_plan(page.plan)
+
+    def screenshot_apply(self):
+        self.current_step._apply()
+
+    def screenshot_applied(self):
+        """Wait until the open step has finished applying (returns 'wait' while it runs)."""
+        page = self.current_step
+        if page.plan is None:
+            return "wait"            # still planning
+        if not page.plan.actionable:
+            return None              # nothing to apply: it moved on by itself
+        return "wait" if self.state.busy or not page.next_btn.get_visible() else None
+
+    def screenshot_next(self):
+        """'Next Step' on the open step."""
+        self.next_after(self.current_step.step)
+
+    def screenshot_skip(self):
+        self.current_step._skip()
+
+    def screenshot_scrolllog(self):
+        page = self.current_step
+        buf = page.logview.get_buffer()
+        page.logview.scroll_to_iter(buf.get_end_iter(), 0, False, 0, 0)
 
 
 class StepPage:

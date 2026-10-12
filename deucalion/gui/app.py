@@ -6,6 +6,7 @@ import os
 import sys
 from pathlib import Path
 
+from .shots import parse_screenshot_entries
 from .common import (APP_ID, Adw, AppState, Gdk, Gio, GLib, Gtk, alert, ask_password, run_async,  # noqa: F401
                      toast)
 
@@ -166,6 +167,47 @@ class MainWindow(Adw.ApplicationWindow):
         run_async(work, lambda _r: (self.state.refresh(), toast(self, "You can unplug the drive now")),
                   lambda msg: alert(self, "Could not close the drive", msg))
 
+    # -- screenshot mode only (see _screenshots) ---------------------------------------------------
+    def screenshot_close(self):
+        """Close the open dialog (without answering it)."""
+        d = self.get_visible_dialog()
+        if d is not None:
+            d.force_close()
+
+    def screenshot_answer(self, response: str):
+        """Answer the open dialog, as clicking its button (e.g. 'forget', 'restore') would."""
+        d = self.get_visible_dialog()
+        if isinstance(d, Adw.AlertDialog):
+            d.emit("response", response)
+            d.force_close()
+
+    def screenshot_about(self):
+        self.get_application()._about()
+
+    def screenshot_unlock(self):
+        self.unlock_drive()
+
+    def screenshot_sidebar(self):
+        self.split.set_show_content(False)
+
+    def screenshot_scroll(self, fraction: str = "1"):
+        """Scroll the visible page (0 = top, 1 = bottom)."""
+        root = self.split.get_content().get_child()
+        stack = [root]
+        while stack:
+            w = stack.pop(0)
+            if isinstance(w, Gtk.ScrolledWindow) and w.get_mapped():
+                adj = w.get_vadjustment()
+                adj.set_value(adj.get_lower() + float(fraction) * (adj.get_upper() - adj.get_page_size()))
+                return
+            child = w.get_first_child()
+            while child is not None:
+                stack.append(child)
+                child = child.get_next_sibling()
+
+    def screenshot_wait(self):
+        pass
+
 
 class DeucalionApp(Adw.Application):
     def __init__(self):
@@ -189,12 +231,20 @@ class DeucalionApp(Adw.Application):
         if os.environ.get("DEUCALION_SCREENSHOT_DIR"):  # headless rendering reports no font DPI
             settings = Gtk.Settings.get_default()
             settings.set_property("gtk-xft-dpi", 96 * 1024)
-            settings.set_property("gtk-font-name", "Ubuntu Sans 11")
+            settings.set_property("gtk-font-name", os.environ.get("DEUCALION_SCREENSHOT_FONT", "Ubuntu Sans 11"))
+            theme = os.environ.get("DEUCALION_SCREENSHOT_THEME", "")
+            if theme in ("light", "dark"):
+                Adw.StyleManager.get_default().set_color_scheme(
+                    Adw.ColorScheme.FORCE_LIGHT if theme == "light" else Adw.ColorScheme.FORCE_DARK)
 
     def do_activate(self):
         if self.window is None:
             self.state = AppState()
             self.window = MainWindow(self, self.state)
+            size = os.environ.get("DEUCALION_SCREENSHOT_SIZE", "") if os.environ.get("DEUCALION_SCREENSHOT_DIR") else ""
+            if "x" in size:
+                w, h = size.split("x", 1)
+                self.window.set_default_size(int(w), int(h))
             self.state.refresh()
         self.window.present()
         shots = os.environ.get("DEUCALION_SCREENSHOT_DIR")
@@ -212,34 +262,58 @@ class DeucalionApp(Adw.Application):
 
 
 def _screenshots(win: MainWindow, folder: Path) -> None:
-    """Developer aid: render each page to a PNG, then quit (DEUCALION_SCREENSHOT_DIR)."""
+    """Developer aid for the documentation: render the window to PNGs, then quit.
+    Only active when DEUCALION_SCREENSHOT_DIR is set (see parse_screenshot_entries)."""
     from gi.repository import Graphene
     folder.mkdir(parents=True, exist_ok=True)
-    keys = os.environ.get("DEUCALION_SCREENSHOT_PAGES", ",".join(k for k, _, _ in PAGES)).split(",")
+    entries = parse_screenshot_entries(os.environ.get("DEUCALION_SCREENSHOT_PAGES", ",".join(k for k, _, _ in PAGES)),
+                                       int(os.environ.get("DEUCALION_SCREENSHOT_WAIT", "1200")))
 
-    def snap(name: str) -> None:
+    def snap(name: str) -> bool:
+        """Save the window as NAME.png. False if GTK had nothing to draw just now (try again)."""
+        if name == "_":
+            return True
         w, h = win.get_width(), win.get_height()
         shot = Gtk.Snapshot()
         Gtk.WidgetPaintable.new(win).snapshot(shot, w, h)
         node = shot.to_node()
-        if node is not None:
-            tex = win.get_native().get_renderer().render_texture(node, Graphene.Rect().init(0, 0, w, h))
-            tex.save_to_png(str(folder / f"{name}.png"))
+        tex = win.get_native().get_renderer().render_texture(node, Graphene.Rect().init(0, 0, w, h)) if node else None
+        if tex is None or not tex.save_to_png(str(folder / f"{name}.png")):
+            return False
+        print(f"screenshot: {name}.png", flush=True)
+        return True
 
-    def step(i: int) -> bool:
-        if i > 0:
-            snap(keys[i - 1])
-        if i >= len(keys):
+    def step(i: int, tries: int = 0) -> bool:
+        if i > 0 and not snap(entries[i - 1][0]):
+            if tries < 20:  # e.g. while a page with changing labels is being laid out
+                GLib.timeout_add(250, lambda: step(i, tries + 1))
+                return False
+            print(f"screenshot FAILED: {entries[i - 1][0]}.png", flush=True)
+        if i >= len(entries):
             win.get_application().quit()
             return False
-        key = keys[i]
-        if ":" in key:  # page:action, e.g. "drives:setup"
-            page, action = key.split(":", 1)
-            win.show_page(page)
-            getattr(win.page(page), f"screenshot_{action}")()
-        else:
-            win.show_page(key)
-        GLib.timeout_add(int(os.environ.get("DEUCALION_SCREENSHOT_WAIT", "1200")), lambda: step(i + 1))
+        run(i)
+        return False
+
+    def run(i: int, polls: int = 0) -> bool:
+        _name, page, action, arg, wait = entries[i]
+        result = None
+        try:
+            if page == "win":
+                target = win
+            else:
+                if polls == 0:
+                    win.show_page(page)
+                target = win.page(page)
+            if action:
+                result = getattr(target, f"screenshot_{action}")(*([arg] if arg else []))
+        except Exception:
+            import traceback
+            traceback.print_exc()
+        if result == "wait" and polls < 3600:  # the hook isn't done yet (e.g. a rebuild step): ask again
+            GLib.timeout_add(1000, lambda: run(i, polls + 1))
+            return False
+        GLib.timeout_add(wait, lambda: step(i + 1))
         return False
 
     step(0)

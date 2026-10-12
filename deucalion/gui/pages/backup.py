@@ -121,12 +121,40 @@ class BackupPage:
         self.everything.set_active(True)
         self.start_scan()
 
+    # Screenshot mode only (the documentation): each one does what a click would do.
     def screenshot_review(self):
         self.start_full()
 
     def screenshot_done(self):
         self._auto_copy = True
         self.start_full()
+
+    def screenshot_some(self, folders: str = ""):
+        """'Only some folders' with these folders (relative to the home folder, separated by '|')."""
+        self.some.set_active(True)
+        self.folders = [str(self.state.cfg.home / f) for f in folders.split("|") if f]
+        self._update_choose()
+
+    def screenshot_scan(self):
+        self.start_scan()
+
+    def screenshot_copy(self):
+        if self.stack.get_visible_child_name() == "review":
+            self._start_copy()
+
+    def screenshot_finished(self):
+        """Wait until the running backup has finished (returns 'wait' while it runs)."""
+        return "wait" if self.stack.get_visible_child_name() in ("scanning", "running") else None
+
+    def screenshot_stop(self):
+        self._ask_stop()
+
+    def screenshot_back(self):
+        if self.stack.get_visible_child_name() == "review":
+            self._back_from_review()
+        elif self.stack.get_visible_child_name() == "done":
+            self.stack.set_visible_child_name("choose")
+            self.state.refresh()
 
     # -- scanning -------------------------------------------------------------------------------------
     def _build_scanning(self):

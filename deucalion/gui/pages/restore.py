@@ -38,7 +38,7 @@ class RestorePage:
 
         self.sel_label = label("Nothing selected", ("dim-label",), wrap=False)
         self.dest = Gtk.DropDown.new_from_strings(["To their original place", "To another folder…"])
-        self.dest.connect("notify::selected", self._on_dest)
+        self._dest_handler = self.dest.connect("notify::selected", self._on_dest)
         self.restore_btn = button("Restore…", self._preview, ("suggested-action", "pill"))
         bottom = hbox(12, [self.sel_label, Gtk.Box(hexpand=True), self.dest, self.restore_btn])
         for side in ("top", "bottom", "start", "end"):
@@ -292,3 +292,39 @@ class RestorePage:
         self.selected.clear()
         self.stack.set_visible_child_name("browse")
         self._refresh_list()
+
+    # -- screenshot mode only (the documentation) ------------------------------------------------------
+    def screenshot_browse(self, path: str = ""):
+        """Open a folder of the backup, e.g. 'home/Documents'."""
+        self.search.set_text("")
+        self._go(path)
+
+    def screenshot_select(self, paths: str):
+        """Tick items (backup paths separated by '|')."""
+        for p in paths.split("|"):
+            self._toggle(p, True)
+        self._refresh_list()
+
+    def screenshot_search(self, text: str = ""):
+        self.search.set_text(text)
+        self._refresh_list()
+
+    def screenshot_to(self, folder: str):
+        """'To another folder…' with this folder (relative to the home folder), without the file chooser."""
+        self.dest.handler_block(self._dest_handler)
+        self.dest.set_selected(1)
+        self.dest.handler_unblock(self._dest_handler)
+        self.to_folder = str(self.state.cfg.home / folder)
+
+    def screenshot_preview(self):
+        self._preview()
+
+    def screenshot_restore(self):
+        """Restore the selection without the confirmation dialog (it was shown just before)."""
+        items = sorted(self.selected)
+        restorer = Restorer(self.state.cfg, self.state.target, self.manifest)
+        to = Path(self.to_folder) if self.to_folder else None
+        self._run(restorer, restorer.plan(items, to))
+
+    def screenshot_done(self):
+        self._back()

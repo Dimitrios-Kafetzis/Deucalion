@@ -119,11 +119,58 @@ class DrivesPage:
     # -- setup wizard --------------------------------------------------------------------------------
     def start_setup(self, device: str | None = None):
         self.win.show_page("drives")
-        SetupWizard(self, device).present()
+        self.wizard = SetupWizard(self, device)
+        self.wizard.present()
 
-    def screenshot_setup(self):
-        drives = [d for d in list_drives() if not d.system]
-        self.start_setup(drives[0].path if drives else None)
+    # Screenshot mode only (the documentation): each one does what a click would do.
+    def screenshot_setup(self, device: str = ""):
+        """Open the wizard; with a device (e.g. /dev/sda) it starts at the storage page, as 'Set Up…' does."""
+        self.start_setup(device or None)
+
+    def screenshot_expand(self):
+        """Open every connected drive's row."""
+        child = self.connected_group
+        for r in getattr(child, "_rows", []):
+            if isinstance(r, Adw.ExpanderRow):
+                r.set_expanded(True)
+
+    def screenshot_pick(self, key: str):
+        """Choose an option (a drive path, layout or encryption key) on the wizard's current page."""
+        self.wizard.checks[key].set_active(True)
+
+    def screenshot_fill(self, values: str = ""):
+        """Fill the details page: 'name|password|size'."""
+        w = self.wizard
+        name, _, rest = values.partition("|")
+        password, _, size = rest.partition("|")
+        if name:
+            w.name_row.set_text(name)
+        if w.pw1 is not None and password:
+            w.pw1.set_text(password)
+            w.pw2.set_text(password)
+        if w.size_row is not None and size:
+            w.size_row.set_value(float(size))
+
+    def screenshot_confirm(self):
+        """Type the drive's name on the confirmation page."""
+        w = self.wizard
+        if w.confirm_entry is not None:
+            w.confirm_entry.set_text(os.path.basename(w.drive.path))
+
+    def screenshot_next(self):
+        """Press the wizard's button at the bottom of the current page (Next, Set Up…)."""
+        self.wizard.nav.get_visible_page().get_child().next_button.emit("clicked")
+
+    def screenshot_finished(self):
+        """Wait until the wizard's drive setup has finished (returns 'wait' while it runs)."""
+        return "wait" if not self.wizard.dialog.get_can_close() else None
+
+    def screenshot_forget(self, name: str = ""):
+        """Ask to forget a backup drive (by name; default: the default drive)."""
+        targets = self.state.cfg.get("targets", {})
+        tid = next((t for t, v in targets.items() if v.get("name") == name), self.state.cfg.get("default_target"))
+        if tid:
+            self._forget(tid)
 
 
 class SetupWizard:
@@ -165,6 +212,7 @@ class SetupWizard:
         g = Adw.PreferencesGroup(title=title, description=description)
         first = None
         checks = []
+        self.checks = {}
         for key, t, sub, enabled in options:
             c = Gtk.CheckButton(group=first)
             first = first or c
@@ -175,6 +223,7 @@ class SetupWizard:
             r.set_sensitive(enabled)
             g.add(r)
             checks.append(c)
+            self.checks[key] = c
         return g, checks
 
     # pages

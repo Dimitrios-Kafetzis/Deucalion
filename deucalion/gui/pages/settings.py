@@ -90,6 +90,15 @@ class SettingsPage:
                                                icon="user-trash-symbolic", tooltip="Remove")))
         self._loading = False
 
+    # Screenshot mode only (the documentation).
+    def screenshot_reset(self):
+        self._reset()
+
+    def screenshot_typing(self, text: str):
+        """Type into the 'Add a pattern' row without adding it yet."""
+        self.add_row.set_text(text)
+        self.add_row.grab_focus()
+
     def _set(self, key, value):
         if self._loading:
             return
