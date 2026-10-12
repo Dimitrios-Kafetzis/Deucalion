@@ -24,22 +24,36 @@ jobs:
           echo "VERSION=$version" >> "$GITHUB_ENV"
       - name: Take the notes from CHANGELOG.md
         run: |
-          awk -v v="$VERSION" '
-            $0 ~ "^## \\[" v "\\]" { found = 1; next }
-            found && /^## \[/ { exit }
-            found && /^\[[^]]+\]: / { exit }
-            found { print }
-          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
-          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
-            echo "::error::CHANGELOG.md has no section for $VERSION"; exit 1
-          fi
-          cat >> "$RUNNER_TEMP/notes.md" <<EOF
-
-          ---
-
-          **Install or update:** see [Install Deucalion](https://dimitrios-kafetzis.github.io/Deucalion/getting-started/install/).
-
-          **Documentation:** https://dimitrios-kafetzis.github.io/Deucalion/
+          # The section for this version, with wrapped lines joined (GitHub keeps line breaks in
+          # release notes)
+          python3 - "$VERSION" CHANGELOG.md > "$RUNNER_TEMP/notes.md" <<'EOF'
+          import re, sys
+          version, path = sys.argv[1], sys.argv[2]
+          out, inside = [], False
+          for line in open(path, encoding="utf-8").read().splitlines():
+              if line.startswith("## ["):
+                  if inside:
+                      break
+                  inside = line.startswith(f"## [{version}]")
+                  continue
+              if not inside or re.match(r"^\[[^\]]+\]: ", line):
+                  continue
+              continuation = line.startswith("  ") or not re.match(r"^(#|- |---|$)", line)
+              if continuation and out and out[-1] and not out[-1].startswith("#"):
+                  out[-1] += " " + line.strip()
+              else:
+                  out.append(line)
+          text = "\n".join(out).strip()
+          if not text:
+              sys.exit(f"CHANGELOG.md has no section for {version}")
+          print(text)
+          print()
+          print("---")
+          print()
+          print("**Install or update:** see [Install Deucalion]"
+                "(https://dimitrios-kafetzis.github.io/Deucalion/getting-started/install/).")
+          print()
+          print("**Documentation:** https://dimitrios-kafetzis.github.io/Deucalion/")
           EOF
       - name: Publish the release
         env:
