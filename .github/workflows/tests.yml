@@ -1,0 +1,49 @@
+# Runs the test suite on the Ubuntu versions Deucalion supports, and once more on a real exFAT volume.
+name: Tests
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  test:
+    name: Ubuntu ${{ matrix.ubuntu }}
+    runs-on: ubuntu-${{ matrix.ubuntu }}
+    strategy:
+      fail-fast: false
+      matrix:
+        ubuntu: ["22.04", "24.04"]
+    steps:
+      - uses: actions/checkout@v7
+      # Ubuntu's own Python and PyGObject, as on a user's computer
+      - name: Install what Deucalion needs
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 libgtk-4-bin exfatprogs gnupg dconf-cli
+      - name: Run the tests
+        run: python3 -m unittest discover -s tests -v
+
+  exfat:
+    name: On a real exFAT volume
+    runs-on: ubuntu-24.04
+    steps:
+      - uses: actions/checkout@v7
+      - name: Install what Deucalion needs
+        run: |
+          sudo apt-get update -q
+          sudo apt-get install -y -q python3-gi gir1.2-gtk-4.0 gir1.2-adw-1 exfatprogs gnupg
+      - name: Create and mount an exFAT disk image
+        run: |
+          truncate -s 2G "$RUNNER_TEMP/exfat.img"
+          mkfs.exfat -L TEST "$RUNNER_TEMP/exfat.img"
+          sudo mkdir -p /mnt/exfat
+          sudo mount -o loop,uid="$(id -u)",gid="$(id -g)" "$RUNNER_TEMP/exfat.img" /mnt/exfat
+      - name: Run the tests on exFAT
+        env:
+          DEUCALION_TEST_EXFAT: /mnt/exfat
+        run: python3 -m unittest discover -s tests -v

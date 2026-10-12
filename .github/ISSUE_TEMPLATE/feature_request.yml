@@ -1,0 +1,25 @@
+name: Feature request
+description: Suggest something Deucalion should do.
+labels: [enhancement]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check the [plan](https://dimitrios-kafetzis.github.io/Deucalion/developers/plan/) and the open issues first: it may already be planned. For open-ended ideas, [Discussions](https://github.com/Dimitrios-Kafetzis/Deucalion/discussions/categories/ideas) is a good place to start.
+  - type: textarea
+    id: problem
+    attributes:
+      label: What problem would it solve?
+      description: Describe the situation, for example "I want my backups to run every evening without me starting them."
+    validations:
+      required: true
+  - type: textarea
+    id: solution
+    attributes:
+      label: What would you like to happen?
+    validations:
+      required: true
+  - type: textarea
+    id: alternatives
+    attributes:
+      label: Alternatives you considered

@@ -1,0 +1,11 @@
+blank_issues_enabled: false
+contact_links:
+  - name: Question or help
+    url: https://github.com/Dimitrios-Kafetzis/Deucalion/discussions/categories/q-a
+    about: Ask how to do something, or get help with your setup.
+  - name: Documentation
+    url: https://dimitrios-kafetzis.github.io/Deucalion/
+    about: Tutorials for the app and the command line, and troubleshooting.
+  - name: Security problem
+    url: https://github.com/Dimitrios-Kafetzis/Deucalion/security/advisories/new
+    about: Report a vulnerability privately. Please don't open a public issue.

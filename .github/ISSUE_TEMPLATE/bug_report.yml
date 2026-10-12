@@ -1,0 +1,80 @@
+name: Bug report
+description: Something doesn't work as described, or Deucalion shows an error.
+labels: [bug]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for reporting! Please check the [troubleshooting page](https://dimitrios-kafetzis.github.io/Deucalion/troubleshooting/) first.
+        **Security problem?** Don't report it here; see [SECURITY.md](https://github.com/Dimitrios-Kafetzis/Deucalion/blob/main/SECURITY.md).
+  - type: textarea
+    id: what
+    attributes:
+      label: What happened?
+      description: Include the exact message you saw (copy it, or attach a screenshot).
+    validations:
+      required: true
+  - type: textarea
+    id: steps
+    attributes:
+      label: Steps to reproduce
+      placeholder: |
+        1. Open the app and go to Back Up
+        2. Click Back Up Now
+        3. …
+    validations:
+      required: true
+  - type: textarea
+    id: expected
+    attributes:
+      label: What did you expect to happen?
+    validations:
+      required: true
+  - type: input
+    id: version
+    attributes:
+      label: Deucalion version
+      description: Run `deucalion --version` (or see About in the app).
+      placeholder: Deucalion 0.2.1
+    validations:
+      required: true
+  - type: input
+    id: ubuntu
+    attributes:
+      label: Ubuntu version
+      description: Run `lsb_release -ds`.
+      placeholder: Ubuntu 24.04.3 LTS
+    validations:
+      required: true
+  - type: dropdown
+    id: where
+    attributes:
+      label: Where did it happen?
+      options:
+        - The app
+        - The command line
+        - Both
+    validations:
+      required: true
+  - type: dropdown
+    id: layout
+    attributes:
+      label: Backup drive layout
+      options:
+        - Encrypted whole drive (VeraCrypt)
+        - Encrypted whole drive (LUKS)
+        - Encrypted part + normal part (VeraCrypt)
+        - Encrypted part + normal part (LUKS)
+        - Encrypted folder (VeraCrypt)
+        - Encrypted folder (LUKS)
+        - exFAT, no encryption
+        - Drive used as it is (NTFS, ext4, …)
+        - Not related to a drive
+        - I don't know
+  - type: textarea
+    id: logs
+    attributes:
+      label: Log
+      description: |
+        The log of the run is in `~/.local/state/deucalion/logs/` (newest file). **Remove anything private** (file names, user names) before pasting.
+      render: text
