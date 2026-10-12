@@ -1,0 +1,2 @@
+$ deucalion close
+Backup drive 'Big' is closed. You can unplug it.

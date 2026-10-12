@@ -1,0 +1,24 @@
+$ deucalion backup --dry-run
+Backing up to Alex Backup  /media/alex/Alex Backup/Deucalion-Backup
+Saving the system recipe (packages, settings, services)…
+Backup plan (full: everything)
+  New files:               3   2.4 MB
+  Changed files:           2   86 B (previous versions go to _removed/)
+  Gone/excluded:           1   38 B (moved to _removed/)
+  Unchanged:           1,043   488.1 MB
+  Largest folders in this backup:
+      333.8 MB           2 files  home/Videos
+       86.0 MB          34 files  home/Pictures
+       63.4 MB           3 files  home/Music
+        5.8 MB         371 files  home/Deucalion
+      875.1 KB          63 files  home/.local
+      432.8 KB          11 files  home/Documents
+      128.8 KB         467 files  home/Projects
+       81.3 KB          61 files  system/etc
+       49.0 KB          13 files  system/packages
+        4.8 KB           6 files  home (files)
+        2.0 KB           3 files  system/services
+        1.9 KB           2 files  system (files)
+  Warnings (1):
+    System settings (/etc, network) were not updated because administrator access was not used; the copy from an earlier backup is kept.
+Dry run: nothing was copied. Add --details to list every file.

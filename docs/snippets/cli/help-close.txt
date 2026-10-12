@@ -1,0 +1,8 @@
+$ deucalion close --help
+usage: deucalion close [-h] [--target NAME]
+
+lock/unmount the backup drive so it can be unplugged
+
+options:
+  -h, --help     show this help message and exit
+  --target NAME  which registered drive to use

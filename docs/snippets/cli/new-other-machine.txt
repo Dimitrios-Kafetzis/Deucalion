@@ -1,0 +1,23 @@
+$ bin/deucalion backup --dry-run
+Backing up to Alex Backup  /media/alexk/Alex Backup/Deucalion-Backup
+This drive holds the backup of alex@alex-laptop (home folder /home/alex), but this is alexk@alex-new-laptop (home folder /home/alexk). Backing up will make the drive mirror this machine: anything that is only in the old backup will be moved to _removed/. If this is a new machine, restore your files first.
+Saving the system recipe (packages, settings, services)…
+Backup plan (full: everything)
+  New files:               3   3.9 KB
+  Changed files:          68   94.6 KB (previous versions go to _removed/)
+  Gone/excluded:          46   368.7 MB (moved to _removed/)
+  Unchanged:               0   0 B
+  Largest folders in this backup:
+       56.1 KB          48 files  system/etc
+       32.0 KB          10 files  system/packages
+        4.7 KB           3 files  home (files)
+        2.1 KB           2 files  system/services
+        1.9 KB           2 files  system (files)
+        1.4 KB           2 files  home/.config
+         331 B           1 files  system/software
+         105 B           1 files  home/.ssh
+          27 B           1 files  home/Documents
+           0 B           1 files  system/desktop
+  Warnings (1):
+    13 system files (and network connections) can only be saved with administrator access.
+Dry run: nothing was copied. Add --details to list every file.

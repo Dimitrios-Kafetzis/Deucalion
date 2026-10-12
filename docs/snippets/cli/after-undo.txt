@@ -1,0 +1,2 @@
+$ ls ~/Deucalion-before-restore
+2026-10-12_093241  2026-10-12_093251-paths  2026-10-12_093300-desktop

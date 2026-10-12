@@ -1,0 +1,5 @@
+$ deucalion verify --full
+Verified 648 files, 157.0 MB — full (checksums)
+  Damaged (checksum mismatch):
+    home/Documents/CV - Alex.pdf
+Problems found. The next backup will copy these files again.

@@ -1,0 +1,12 @@
+$ deucalion backup --no-admin
+Backing up to Alex Backup  /media/alex/Alex Backup/Deucalion-Backup
+Saving the system recipe (packages, settings, services)…
+Backup plan (full: everything)
+  New files:               2   293.0 KB
+  Changed files:           1   1.4 KB (previous versions go to _removed/)
+  Gone/excluded:           2   333.8 MB (moved to _removed/)
+  Unchanged:             645   156.7 MB
+  Warnings (1):
+    System settings (/etc, network) were not updated because administrator access was not used; the copy from an earlier backup is kept.
+Backup finished in 0s: copied 3 files (294.4 KB), moved 2 items to _removed/. Some warnings above.
+Log: /media/alex/Alex Backup/Deucalion-Backup/.deucalion/logs/2026-10-12_091040-backup.log

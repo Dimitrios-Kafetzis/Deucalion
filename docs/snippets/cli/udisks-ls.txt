@@ -1,0 +1,6 @@
+$ ls /media/alex/Big /media/alex/Big/Deucalion-Backup
+/media/alex/Big:
+Deucalion-Backup  lost+found
+
+/media/alex/Big/Deucalion-Backup:
+backup.json  home  system

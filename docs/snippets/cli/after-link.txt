@@ -1,0 +1,2 @@
+$ readlink ~/.local/bin/tool
+/home/alexk/Projects/scripts/tool.sh

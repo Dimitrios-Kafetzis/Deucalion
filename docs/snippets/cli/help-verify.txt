@@ -1,0 +1,9 @@
+$ deucalion verify --help
+usage: deucalion verify [-h] [--full] [--target NAME]
+
+check the backup on the drive is complete and undamaged
+
+options:
+  -h, --help     show this help message and exit
+  --full         also re-read every file and compare checksums
+  --target NAME  which registered drive to use

@@ -1,0 +1,6 @@
+$ ls -a "/media/alex/Alex Backup/Deucalion-Backup" "/media/alex/Alex Backup/Deucalion-Backup/.deucalion"
+'/media/alex/Alex Backup/Deucalion-Backup':
+.  ..  .deucalion  _removed  backup.json  home	system
+
+'/media/alex/Alex Backup/Deucalion-Backup/.deucalion':
+.  ..  drive-id  lock  logs  manifest.sqlite  manifest.sqlite.bak

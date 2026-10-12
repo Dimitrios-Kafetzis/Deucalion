@@ -1,0 +1,11 @@
+$ deucalion ls --help
+usage: deucalion ls [-h] [--target NAME] [path]
+
+list what is in the backup (with original names)
+
+positional arguments:
+  path           e.g. ~/Documents or home/Documents
+
+options:
+  -h, --help     show this help message and exit
+  --target NAME  which registered drive to use

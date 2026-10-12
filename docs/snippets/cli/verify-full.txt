@@ -1,0 +1,3 @@
+$ deucalion verify --full
+Verified 648 files, 157.0 MB — full (checksums)
+The backup is intact.

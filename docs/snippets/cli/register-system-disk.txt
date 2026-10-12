@@ -1,0 +1,2 @@
+$ deucalion register ~/Backups
+/home/alex/Backups is on the same disk as your system. A backup there would be lost together with the system. Choose an external drive.

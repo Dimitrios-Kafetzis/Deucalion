@@ -1,0 +1,10 @@
+$ deucalion backup
+Backing up to Alex Backup  /media/alex/Alex Backup/Deucalion-Backup
+Saving the system recipe (packages, settings, services) — you may be asked for your administrator password…
+Backup plan (full: everything)
+  New files:               3   2.4 MB
+  Changed files:           2   86 B (previous versions go to _removed/)
+  Gone/excluded:           1   38 B (moved to _removed/)
+  Unchanged:           1,043   488.1 MB
+Backup finished in 0s: copied 5 files (2.4 MB), moved 1 item to _removed/.
+Log: /media/alex/Alex Backup/Deucalion-Backup/.deucalion/logs/2026-10-12_091015-backup.log

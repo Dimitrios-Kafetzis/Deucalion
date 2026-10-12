@@ -1,0 +1,31 @@
+$ deucalion --help
+usage: deucalion [-h] [--version] COMMAND ...
+
+Back up your Ubuntu machine to an external drive, and restore or rebuild from it.
+
+positional arguments:
+  COMMAND
+    gui        open the app (also what plain 'deucalion' does)
+    deps       check (and install) what Deucalion needs, including VeraCrypt
+    drives     list connected drives
+    register   use a drive (or a folder on it) for backups
+    targets    list registered backup drives
+    setup-drive
+               prepare a drive for backups (format, encrypt)
+    open       unlock an encrypted backup drive
+    close      lock/unmount the backup drive so it can be unplugged
+    backup     back up everything, or only some folders
+    status     show the state of the backup
+    ls         list what is in the backup (with original names)
+    restore    restore files or folders from the backup
+    rebuild    rebuild this machine from a backup (new machine or new Ubuntu)
+    verify     check the backup on the drive is complete and undamaged
+    removed    list or empty _removed/ (old versions and deleted files)
+    exclude    manage what is left out of your home backup
+    folder     manage extra folders outside your home (e.g. /srv)
+    profile    manage saved selections for partial backups
+    config     show or edit the configuration
+
+options:
+  -h, --help   show this help message and exit
+  --version    show program's version number and exit

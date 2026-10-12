@@ -22,6 +22,18 @@ Ubuntu LTS or on a new machine, even with a different username.
 > **Status:** version 0.2: backup, restore, rebuild, drive setup and encryption, as a GNOME app and
 > from the command line, after an extensive safety campaign (see *How Deucalion protects your data*).
 
+## Documentation
+
+The full documentation, with step-by-step tutorials for the app and the command line, is at
+**https://dimitrios-kafetzis.github.io/Deucalion/** (its source is in [`docs/`](docs/)).
+To read it locally:
+
+```bash
+python3 -m venv ~/.venvs/deucalion-docs
+~/.venvs/deucalion-docs/bin/pip install -r docs/requirements.txt
+~/.venvs/deucalion-docs/bin/mkdocs serve      # then open http://127.0.0.1:8000
+```
+
 ## Install
 
 ```bash
@@ -108,7 +120,7 @@ Deucalion-Backup/
 
 On exFAT, a name that isn't allowed there is stored with a look-alike character
 (`report: v2?.txt` → `report： v2？.txt`). Names that differ only in case get a counter
-(`notes.txt` / `Notes (2).txt`). Restoring always uses the original names.
+(`Notes.txt` / `notes (2).txt`). Restoring always uses the original names.
 
 ## Rebuilding a machine
 
@@ -192,6 +204,8 @@ unencrypted part.
   byte for byte.
 
 ## Development
+
+See [For developers](docs/developers/index.md) and the [plan for version 1](docs/developers/plan.md).
 
 ```bash
 python3 -m unittest discover -s tests            # unit + integration tests

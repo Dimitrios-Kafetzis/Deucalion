@@ -1,0 +1,2 @@
+$ deucalion config path
+/home/alex/.config/deucalion/config.json

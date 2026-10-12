@@ -1,0 +1,10 @@
+$ deucalion restore "~/Documents/Budget 2026.ods" --dry-run
+Restore plan
+  home/Documents/Budget 2026.ods  →  /home/alex/Documents/Budget 2026.ods
+  New:                     0
+  Overwrite:               1   (current versions are moved aside first)
+  Already the same:        0
+  To copy:                 1   44.9 KB
+  Will overwrite:
+    /home/alex/Documents/Budget 2026.ods
+Dry run: nothing was changed.

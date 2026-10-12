@@ -1,0 +1,10 @@
+$ deucalion config --help
+usage: deucalion config [-h] [{show,edit,path}]
+
+show or edit the configuration
+
+positional arguments:
+  {show,edit,path}
+
+options:
+  -h, --help        show this help message and exit

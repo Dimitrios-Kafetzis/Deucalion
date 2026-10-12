@@ -1,0 +1,11 @@
+$ deucalion exclude --help
+usage: deucalion exclude [-h] [{list,add,remove,reset}] [patterns ...]
+
+manage what is left out of your home backup
+
+positional arguments:
+  {list,add,remove,reset}
+  patterns
+
+options:
+  -h, --help            show this help message and exit

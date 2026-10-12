@@ -1,0 +1,7 @@
+$ deucalion targets --help
+usage: deucalion targets [-h]
+
+list registered backup drives
+
+options:
+  -h, --help  show this help message and exit

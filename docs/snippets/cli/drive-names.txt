@@ -1,0 +1,3 @@
+$ ls "/media/alex/Alex Backup/Deucalion-Backup/home/Documents"
+'Budget 2026.ods'   Notes.txt   Work		'report： final？.txt'	'Ταξίδι στην Κρήτη 🌍.md'
+'CV - Alex.pdf'     Tax        'notes (2).txt'	 Συνταγές.txt

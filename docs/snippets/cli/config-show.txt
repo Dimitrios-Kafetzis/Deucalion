@@ -1,0 +1,59 @@
+$ deucalion config show
+{
+  "version": 1,
+  "targets": {
+    "f7721c0e-a587-44de-a199-2d74f9c20b4e": {
+      "name": "Alex Backup",
+      "path": "/media/alex/Alex Backup2/Deucalion-Backup",
+      "registered": "2026-10-12T09:08:19+01:00",
+      "allow_internal": false,
+      "access": {
+        "method": "veracrypt",
+        "kind": "partition",
+        "partuuid": "357b958c-3642-4038-828f-af744ee22801",
+        "mount_name": "Alex Backup",
+        "plain_uuid": "EFFC-B52F"
+      }
+    }
+  },
+  "default_target": "f7721c0e-a587-44de-a199-2d74f9c20b4e",
+  "home_path": null,
+  "home_excludes": [
+    ".cache/",
+    ".thumbnails/",
+    ".local/share/Trash/",
+    ".local/share/recently-used.xbel",
+    ".local/share/containers/",
+    ".var/app/*/cache/",
+    ".npm/_cacache/",
+    ".config/**/Cache/",
+    ".config/**/Code Cache/",
+    ".config/**/GPUCache/",
+    ".config/**/DawnCache/",
+    ".config/**/DawnGraphiteCache/",
+    ".config/**/DawnWebGPUCache/",
+    ".config/**/GrShaderCache/",
+    ".config/**/ShaderCache/",
+    ".config/**/CacheStorage/",
+    ".config/**/CachedData/",
+    ".config/**/CachedExtensionVSIXs/",
+    "Videos/",
+    "node_modules/"
+  ],
+  "extra_folders": [
+    {
+      "name": "shared",
+      "path": "/srv/shared",
+      "excludes": []
+    }
+  ],
+  "profiles": {
+    "work": [
+      "/home/alex/Projects",
+      "/home/alex/Documents/Work"
+    ]
+  },
+  "keep_overwritten": true,
+  "system_recipe": true,
+  "system_admin": true
+}

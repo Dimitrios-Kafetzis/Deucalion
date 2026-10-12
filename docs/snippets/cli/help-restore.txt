@@ -1,0 +1,16 @@
+$ deucalion restore --help
+usage: deucalion restore [-h] [--to DIR] [--dry-run] [--details] [-y] [--target NAME]
+                         PATH [PATH ...]
+
+restore files or folders from the backup
+
+positional arguments:
+  PATH           e.g. ~/Documents/report.pdf
+
+options:
+  -h, --help     show this help message and exit
+  --to DIR       restore into this folder instead of the original place
+  --dry-run      show what would happen, change nothing
+  --details      list every file that would be overwritten
+  -y, --yes      don't ask for confirmation
+  --target NAME  which registered drive to use

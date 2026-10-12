@@ -1,0 +1,12 @@
+$ find ~/Deucalion-before-restore
+/home/alex/Deucalion-before-restore
+/home/alex/Deucalion-before-restore/2026-10-12_091110
+/home/alex/Deucalion-before-restore/2026-10-12_091110/home
+/home/alex/Deucalion-before-restore/2026-10-12_091110/home/alex
+/home/alex/Deucalion-before-restore/2026-10-12_091110/home/alex/Documents
+/home/alex/Deucalion-before-restore/2026-10-12_091110/home/alex/Documents/Notes.txt
+/home/alex/Deucalion-before-restore/2026-10-12_091135
+/home/alex/Deucalion-before-restore/2026-10-12_091135/home
+/home/alex/Deucalion-before-restore/2026-10-12_091135/home/alex
+/home/alex/Deucalion-before-restore/2026-10-12_091135/home/alex/Documents
+/home/alex/Deucalion-before-restore/2026-10-12_091135/home/alex/Documents/Budget 2026.ods

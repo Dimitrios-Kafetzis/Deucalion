@@ -1,0 +1,11 @@
+$ deucalion open --help
+usage: deucalion open [-h] [--target NAME] [source]
+
+unlock an encrypted backup drive
+
+positional arguments:
+  source         encrypted partition or file (only needed the first time)
+
+options:
+  -h, --help     show this help message and exit
+  --target NAME  which registered drive to use

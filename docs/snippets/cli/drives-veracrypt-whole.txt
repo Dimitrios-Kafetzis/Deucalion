@@ -1,0 +1,3 @@
+$ deucalion drives
+/dev/sda  Travel Drive  4.0 GB  (external, usb)
+    /dev/mapper/deucalion-4754663baa38 “Travel”  exfat  4.0 GB  /media/alex/Travel  [encrypted, Deucalion backup]

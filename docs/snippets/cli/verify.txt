@@ -1,0 +1,3 @@
+$ deucalion verify
+Verified 648 files, 157.0 MB — quick (sizes)
+The backup is intact.

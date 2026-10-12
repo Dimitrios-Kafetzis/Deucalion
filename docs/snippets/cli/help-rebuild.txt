@@ -1,0 +1,14 @@
+$ deucalion rebuild --help
+usage: deucalion rebuild [-h]
+                         [--step {check,repositories,packages,home,paths,desktop,system-config,services}]
+                         [--dry-run] [-y] [--target NAME]
+
+rebuild this machine from a backup (new machine or new Ubuntu)
+
+options:
+  -h, --help            show this help message and exit
+  --step {check,repositories,packages,home,paths,desktop,system-config,services}
+                        run only this step (again)
+  --dry-run             show every step's plan, change nothing
+  -y, --yes             apply the pre-selected items without asking
+  --target NAME         which registered drive to use

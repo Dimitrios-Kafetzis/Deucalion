@@ -1,0 +1,13 @@
+$ deucalion removed --help
+usage: deucalion removed [-h] [-y] [--target NAME] [{list,empty}] [names ...]
+
+list or empty _removed/ (old versions and deleted files)
+
+positional arguments:
+  {list,empty}
+  names          batches to empty (default: all)
+
+options:
+  -h, --help     show this help message and exit
+  -y, --yes      don't ask for confirmation
+  --target NAME  which registered drive to use

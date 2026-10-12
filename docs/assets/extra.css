@@ -1,0 +1,16 @@
+/* Screenshots: a light frame so white app windows stand out from the white page. */
+.md-typeset img.shot {
+  border: 1px solid var(--md-default-fg-color--lightest);
+  border-radius: 10px;
+  box-shadow: 0 2px 10px rgba(0, 0, 0, .08);
+  display: block;
+  margin: .8em auto;
+  max-width: 100%;
+}
+.md-typeset img.shot.narrow { max-width: 300px; }
+/* Terminal output blocks: no wrapping, so columns line up as in a terminal. */
+.md-typeset pre > code { white-space: pre; }
+/* Step lists: a little more space between steps. */
+.md-typeset ol > li { margin-bottom: .4em; }
+/* Key/value tables in the reference. */
+.md-typeset table:not([class]) th { white-space: nowrap; }

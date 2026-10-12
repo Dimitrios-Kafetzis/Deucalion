@@ -1,0 +1,2 @@
+$ deucalion close
+Backup drive 'Alex Backup' is closed. You can unplug it.

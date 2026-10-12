@@ -1,0 +1,2 @@
+$ sudo mkdir -p /mnt/mybackup && sudo mount /dev/mapper/mybackup /mnt/mybackup && ls /mnt/mybackup/Deucalion-Backup
+backup.json  home  system

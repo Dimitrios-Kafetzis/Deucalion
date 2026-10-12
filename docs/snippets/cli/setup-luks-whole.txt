@@ -1,0 +1,19 @@
+$ deucalion setup-drive /dev/sda --layout encrypt-all --method luks --name Big
+
+/dev/sda  Big Drive  64.0 GB
+  (empty)
+
+Summary
+  Drive:  /dev/sda  Big Drive  64.0 GB
+  Layout: Encrypt the whole drive (luks)
+  EVERYTHING on /dev/sda will be erased.
+  To confirm, type the drive name (sda): sda
+
+Choose the password for the backup. It cannot be recovered if you forget it: write it down and keep it somewhere safe.
+  Backup password:
+  Type it again:
+  Erasing /dev/sda and creating a new partition table
+  Encrypting (LUKS)…
+  Backup drive 'Big' is ready: /media/alex/Big/Deucalion-Backup
+
+Done. Back up with: deucalion backup  (drive 'Big')

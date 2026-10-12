@@ -1,0 +1,19 @@
+$ deucalion backup --help
+usage: deucalion backup [-h] [--only PATH [PATH ...]] [--profile PROFILE] [--dry-run] [--details]
+                        [--check-drive] [-y] [--no-system] [--no-admin] [--target NAME]
+
+back up everything, or only some folders
+
+options:
+  -h, --help            show this help message and exit
+  --only PATH [PATH ...]
+                        back up only these folders/files
+  --profile PROFILE     back up the folders saved in a profile
+  --dry-run             show what would be copied, change nothing
+  --details             list every file and warning
+  --check-drive         also check that every file is really on the drive (slower)
+  -y, --yes             don't ask for confirmation
+  --no-system           don't save the system recipe
+  --no-admin            don't ask for the administrator password (some system settings are then
+                        not saved)
+  --target NAME         which registered drive to use

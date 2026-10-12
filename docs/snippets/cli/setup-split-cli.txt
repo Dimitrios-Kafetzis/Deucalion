@@ -1,0 +1,40 @@
+$ deucalion setup-drive
+Which drive?
+  1) /dev/sda  Backup Drive  8.0 GB
+  Choose [1-1] (default 1):
+
+/dev/sda  Backup Drive  8.0 GB
+  (empty)
+
+How should the backup be stored?
+  1) Encrypt the whole drive
+  2) Encrypted part for the backup + a normal part for other files
+  3) No encryption: erase and format the whole drive as exFAT
+  Choose [1-3] (default 1): 2
+
+Which encryption?
+  1) VeraCrypt: open it on Linux, macOS and Windows (with VeraCrypt)
+  2) LUKS: built into Ubuntu, no extra software, Linux only
+  Choose [1-2] (default 1): 1
+  Size of the encrypted part for backups? [default 5 GB, max 7 GB]: 5
+  A name for this backup drive [Deucalion]: Backup
+
+Summary
+  Drive:  /dev/sda  Backup Drive  8.0 GB
+  Layout: Encrypted part for the backup + a normal part for other files (veracrypt)
+  Encrypted size: 5.0 GB
+  EVERYTHING on /dev/sda will be erased.
+  To confirm, type the drive name (sda): sda
+
+Choose the password for the backup. It cannot be recovered if you forget it: write it down and keep it somewhere safe.
+  Backup password:
+  Type it again:
+  Erasing /dev/sda and creating a new partition table
+  Creating the VeraCrypt volume (you will be asked for your administrator password)…
+  Encrypting (VeraCrypt)…
+  Unlocking (VeraCrypt volumes can take up to a minute)…
+  Creating the exFAT filesystem inside
+  Unlocking (VeraCrypt volumes can take up to a minute)…
+  Backup drive 'Backup' is ready: /media/alex/Backup/Deucalion-Backup
+
+Done. Back up with: deucalion backup  (drive 'Backup')

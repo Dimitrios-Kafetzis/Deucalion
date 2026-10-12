@@ -1,0 +1,2 @@
+$ udisksctl mount --no-user-interaction -b /dev/sda1
+Error mounting /dev/sda1: GDBus.Error:org.freedesktop.UDisks2.Error.NotAuthorizedCanObtain: Not authorized to perform operation

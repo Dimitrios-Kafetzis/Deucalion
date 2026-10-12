@@ -1,0 +1,4 @@
+$ deucalion targets
+Alex Backup (default)  connected
+    /media/alex/Alex Backup/Deucalion-Backup
+    id f7721c0e-a587-44de-a199-2d74f9c20b4e

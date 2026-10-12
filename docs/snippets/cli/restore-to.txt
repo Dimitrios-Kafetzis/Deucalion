@@ -1,0 +1,9 @@
+$ deucalion restore ~/Documents/Work --to ~/Desktop/Recovered
+Restore plan
+  home/Documents/Work  →  /home/alex/Desktop/Recovered/Work
+  New:                     3
+  Overwrite:               0   (current versions are moved aside first)
+  Already the same:        0
+  To copy:                 2   93.8 KB
+Restore now? [y/N] y
+Restored 2 files (93.8 KB).

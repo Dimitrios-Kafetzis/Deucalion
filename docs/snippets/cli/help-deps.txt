@@ -1,0 +1,11 @@
+$ deucalion deps --help
+usage: deucalion deps [-h] [--install] [--veracrypt] [--no-veracrypt] [-y]
+
+check (and install) what Deucalion needs, including VeraCrypt
+
+options:
+  -h, --help      show this help message and exit
+  --install       install what is missing
+  --veracrypt     also install VeraCrypt without asking
+  --no-veracrypt  don't install VeraCrypt
+  -y, --yes       don't ask for confirmation

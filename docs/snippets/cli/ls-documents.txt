@@ -1,0 +1,10 @@
+$ deucalion ls ~/Documents
+  Budget 2026.ods  44.9 KB
+  CV - Alex.pdf  177.7 KB
+  notes.txt  31 B
+  Notes.txt  39 B
+  report: final?.txt  33 B
+  Tax/  2 files, 116.2 KB
+  Work/  2 files, 93.8 KB
+  Συνταγές.txt  54 B
+  Ταξίδι στην Κρήτη 🌍.md  34 B

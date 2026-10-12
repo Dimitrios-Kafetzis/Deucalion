@@ -1,0 +1,12 @@
+$ deucalion folder --help
+usage: deucalion folder [-h] [--name NAME] [{list,add,remove}] [path]
+
+manage extra folders outside your home (e.g. /srv)
+
+positional arguments:
+  {list,add,remove}
+  path               folder to add, or name to remove
+
+options:
+  -h, --help         show this help message and exit
+  --name NAME        short name for the folder on the drive

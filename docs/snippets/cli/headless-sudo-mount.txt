@@ -1,0 +1,2 @@
+$ sudo mkdir -p /mnt/backup-drive && sudo mount -o uid=$(id -u),gid=$(id -g) /dev/sda1 /mnt/backup-drive && ls /mnt/backup-drive
+Deucalion-Tool	READ-ME-FIRST.txt

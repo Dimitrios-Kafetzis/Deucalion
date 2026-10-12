@@ -1,0 +1,25 @@
+$ deucalion setup-drive
+Which drive?
+  1) /dev/sda  Spare Drive  32.0 GB
+  2) /dev/sdb  Work Drive  32.0 GB
+  Choose [1-2] (default 1): 2
+
+/dev/sdb  Work Drive  32.0 GB
+  /dev/sdb1  ntfs  32.0 GB, 68.3 MB used  “Work”  at /media/alex/Work
+
+How should the backup be stored?
+  1) Encrypt the whole drive
+  2) Encrypted part for the backup + a normal part for other files
+  3) Encrypted folder on this drive (keeps what is already on it)
+  4) No encryption: erase and format the whole drive as exFAT
+  5) No encryption: use the drive as it is (keeps what is already on it)
+  Choose [1-5] (default 1): 5
+  A name for this backup drive [Deucalion]: Work
+
+Summary
+  Drive:  /dev/sdb  Work Drive  32.0 GB
+  Layout: No encryption: use the drive as it is (keeps what is already on it)
+  Continue? [y/N] y
+  Backup drive 'Work' is ready: /media/alex/Work/Deucalion-Backup
+
+Done. Back up with: deucalion backup  (drive 'Work')

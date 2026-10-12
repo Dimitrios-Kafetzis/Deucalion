@@ -1,0 +1,18 @@
+$ bin/deucalion rebuild
+Rebuild from backup 'Alex Backup'
+
+✓ Check the backup and this machine: done 2026-10-12T10:08:30+01:00 (run again with --step check)
+
+✓ Software sources (apt repositories): done 2026-10-12T10:08:38+01:00 (run again with --step repositories)
+
+✓ Applications and packages: done 2026-10-12T10:09:12+01:00 (run again with --step packages)
+
+✓ Your home folder: done 2026-10-12T10:09:17+01:00 (run again with --step home)
+
+✓ Update paths in your settings (new home folder): done 2026-10-12T10:09:17+01:00 (run again with --step paths)
+
+✓ Desktop settings (GNOME): done 2026-10-12T10:09:18+01:00 (run again with --step desktop)
+
+✓ System settings (/etc): done 2026-10-12T10:09:19+01:00 (run again with --step system-config)
+
+✓ Groups, scheduled tasks, services and network connections: done 2026-10-12T10:09:21+01:00 (run again with --step services)

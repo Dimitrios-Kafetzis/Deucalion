@@ -1,0 +1,190 @@
+site_name: Deucalion
+site_description: Back up your Ubuntu computer to an external drive, restore files, and rebuild the whole machine on a new Ubuntu version or a new computer.
+site_url: https://dimitrios-kafetzis.github.io/Deucalion/
+repo_url: https://github.com/Dimitrios-Kafetzis/Deucalion
+repo_name: Dimitrios-Kafetzis/Deucalion
+edit_uri: edit/main/docs/
+copyright: Deucalion · documentation for version 0.2.0
+docs_dir: docs
+strict: true
+validation:            # every link, and every #anchor, must point somewhere real
+  omitted_files: warn
+  absolute_links: warn
+  unrecognized_links: warn
+  anchors: warn
+
+exclude_docs: |
+  tools/
+  snippets/
+  requirements.txt
+
+theme:
+  name: material
+  language: en
+  logo: assets/logo.svg
+  icon:
+    repo: fontawesome/brands/github
+  favicon: assets/favicon.svg
+  features:
+    - navigation.tabs
+    - navigation.sections
+    - navigation.indexes
+    - navigation.top
+    - navigation.footer
+    - navigation.tracking
+    - toc.follow
+    - search.suggest
+    - search.highlight
+    - content.code.copy
+    - content.tabs.link
+  palette:
+    - media: "(prefers-color-scheme: light)"
+      scheme: default
+      primary: deep orange
+      accent: deep orange
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - media: "(prefers-color-scheme: dark)"
+      scheme: slate
+      primary: deep orange
+      accent: deep orange
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+extra_css:
+  - assets/extra.css
+
+plugins:
+  - search
+  - glightbox:
+      touchNavigation: true
+      loop: false
+      effect: zoom
+      zoomable: true
+      draggable: false
+      skip_classes:
+        - no-lightbox
+
+markdown_extensions:
+  - admonition
+  - attr_list
+  - md_in_html
+  - def_list
+  - tables
+  - abbr
+  - toc:
+      permalink: true
+  - pymdownx.details
+  - pymdownx.keys
+  - pymdownx.highlight:
+      anchor_linenums: false
+  - pymdownx.inlinehilite
+  - pymdownx.snippets:
+      base_path: [docs]
+      check_paths: true
+  - pymdownx.superfences:
+      custom_fences:
+        - name: mermaid
+          class: mermaid
+          format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tabbed:
+      alternate_style: true
+  - pymdownx.emoji:
+      emoji_index: !!python/name:material.extensions.emoji.twemoji
+      emoji_generator: !!python/name:material.extensions.emoji.to_svg
+
+nav:
+  - Home: index.md
+  - Getting started:
+      - getting-started/index.md
+      - Install: getting-started/install.md
+      - Your first backup: getting-started/first-backup.md
+  - Concepts:
+      - concepts/index.md
+      - One copy, and Removed Files: concepts/mirror-and-removed.md
+      - The manifest: concepts/manifest.md
+      - File names on exFAT: concepts/file-names.md
+      - Full and partial backups: concepts/full-and-partial.md
+      - The system recipe: concepts/system-recipe.md
+      - What a rebuild restores: concepts/rebuild.md
+      - Administrator access: concepts/administrator-access.md
+      - How your data is protected: concepts/safety.md
+  - Choosing a drive: choosing-a-drive.md
+  - The app:
+      - app/index.md
+      - Overview: app/overview.md
+      - Back Up: app/backup.md
+      - Restore: app/restore.md
+      - Rebuild: app/rebuild.md
+      - Drives and drive setup: app/drives.md
+      - Removed Files: app/removed-files.md
+      - Settings: app/settings.md
+      - About: app/about.md
+  - Command line:
+      - cli/index.md
+      - drives and targets: cli/drives.md
+      - setup-drive: cli/setup-drive.md
+      - register: cli/register.md
+      - open and close: cli/open-close.md
+      - backup: cli/backup.md
+      - status: cli/status.md
+      - ls: cli/ls.md
+      - restore: cli/restore.md
+      - rebuild: cli/rebuild.md
+      - verify: cli/verify.md
+      - removed: cli/removed.md
+      - exclude: cli/exclude.md
+      - folder: cli/folder.md
+      - profile: cli/profile.md
+      - config: cli/config.md
+      - deps: cli/deps.md
+      - gui: cli/gui.md
+  - Tutorials:
+      - tutorials/index.md
+      - Set up a drive:
+          - Whole drive, VeraCrypt: tutorials/drive-veracrypt.md
+          - Whole drive, LUKS: tutorials/drive-luks.md
+          - Encrypted part + normal part: tutorials/drive-split.md
+          - Encrypted folder on a drive you use: tutorials/drive-encrypted-folder.md
+          - Plain exFAT, no encryption: tutorials/drive-exfat.md
+          - Use a drive as it is: tutorials/drive-as-is.md
+      - Back up:
+          - Make a full backup: tutorials/full-backup.md
+          - Back up only some folders: tutorials/some-folders.md
+          - Save and use a profile: tutorials/profiles.md
+          - Leave folders out: tutorials/leave-out.md
+          - Back up a folder outside your home: tutorials/outside-home.md
+          - Include protected settings: tutorials/protected-settings.md
+      - Restore:
+          - Find and restore a file: tutorials/restore-file.md
+          - Restore a folder to another place: tutorials/restore-elsewhere.md
+          - Undo a restore: tutorials/undo-restore.md
+      - Look after your backup:
+          - Unlock and lock an encrypted drive: tutorials/unlock-lock.md
+          - Check that a backup is intact: tutorials/verify.md
+          - Free space on the drive: tutorials/free-space.md
+          - Move your backups to a bigger drive: tutorials/bigger-drive.md
+      - Rebuild and recover:
+          - Rebuild your computer: tutorials/rebuild.md
+          - Open your backup without Deucalion: tutorials/open-without-deucalion.md
+          - Use Deucalion without a desktop: tutorials/headless.md
+  - Troubleshooting:
+      - troubleshooting/index.md
+      - Messages and what to do: troubleshooting/messages.md
+      - FAQ: troubleshooting/faq.md
+  - Reference:
+      - reference/index.md
+      - What is on the drive: reference/drive-contents.md
+      - Configuration file: reference/configuration.md
+      - Exclusion patterns: reference/exclusion-patterns.md
+      - Files on your computer: reference/files-on-computer.md
+      - Environment variables: reference/environment.md
+      - Glossary: reference/glossary.md
+  - Developers:
+      - developers/index.md
+      - Tests: developers/testing.md
+      - Documentation and screenshots: developers/documentation.md
+      - Plan for version 1: developers/plan.md
+  - Changelog: changelog.md

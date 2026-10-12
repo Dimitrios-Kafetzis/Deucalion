@@ -1,0 +1,12 @@
+$ deucalion register --help
+usage: deucalion register [-h] [--name NAME] [--default] path
+
+use a drive (or a folder on it) for backups
+
+positional arguments:
+  path         where the drive is mounted, e.g. /media/you/MyDrive
+
+options:
+  -h, --help   show this help message and exit
+  --name NAME  a friendly name for this backup drive
+  --default    make it the default drive

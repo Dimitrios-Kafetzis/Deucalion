@@ -1,0 +1,13 @@
+$ deucalion setup-drive /dev/sdc --layout plain --name Small --yes-erase sdc
+
+/dev/sdc  Small Drive  64.0 MB
+  (empty)
+
+Summary
+  Drive:  /dev/sdc  Small Drive  64.0 MB
+  Layout: No encryption: erase and format the whole drive as exFAT
+  EVERYTHING on /dev/sdc will be erased.
+  Erasing /dev/sdc and creating a new partition table
+  Backup drive 'Small' is ready: /media/alex/Small/Deucalion-Backup
+
+Done. Back up with: deucalion backup  (drive 'Small')

@@ -1,0 +1,10 @@
+$ deucalion backup --profile work
+Backing up to Alex Backup  /media/alex/Alex Backup/Deucalion-Backup
+Backup plan (partial: /home/alex/Projects, /home/alex/Documents/Work)
+  New files:               0   0 B
+  Changed files:           0   0 B (previous versions go to _removed/)
+  Gone/excluded:           0   0 B (moved to _removed/)
+  Unchanged:             469   222.6 KB
+Everything is already up to date.
+Backup finished in 0s: copied 0 files (0 B), moved 0 items to _removed/.
+Log: /media/alex/Alex Backup/Deucalion-Backup/.deucalion/logs/2026-10-12_091022-backup.log

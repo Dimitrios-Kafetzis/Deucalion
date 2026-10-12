@@ -1,0 +1,7 @@
+$ deucalion drives --help
+usage: deucalion drives [-h]
+
+list connected drives
+
+options:
+  -h, --help  show this help message and exit

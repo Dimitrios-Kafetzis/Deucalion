@@ -1,0 +1,18 @@
+$ ./install.sh --system-helper
+Checking what Deucalion needs…
+What Deucalion needs
+  ✓ python3-gi       talking to Ubuntu's disk service and the app
+  ✓ gir1.2-gtk-4.0   the app window
+  ✓ gir1.2-adw-1     the app's GNOME look
+  ✓ udisks2          preparing, unlocking and mounting drives
+  ✓ cryptsetup       opening encrypted drives
+  ✓ exfatprogs       creating exFAT drives (readable on Linux, macOS and Windows)
+  ✓ pkexec           asking for the administrator password
+  ✓ dconf-cli        saving desktop settings
+  ✓ gnupg            verifying the VeraCrypt download
+  ✓ veracrypt        VeraCrypt-encrypted drives (optional)
+Everything Deucalion needs is installed.
+
+Installing Deucalion into /home/alex/.local/share/deucalion
+Installing the administrator helper (asks for your password)…
+Done. Open Deucalion from the app menu, or run: deucalion

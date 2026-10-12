@@ -1,0 +1,3 @@
+$ deucalion folder
+  home: /home/alex  (always included)
+  shared: /srv/shared

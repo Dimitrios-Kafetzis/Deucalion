@@ -1,0 +1,7 @@
+$ deucalion gui --help
+usage: deucalion gui [-h]
+
+open the app (also what plain 'deucalion' does)
+
+options:
+  -h, --help  show this help message and exit

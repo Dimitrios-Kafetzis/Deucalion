@@ -1,0 +1,12 @@
+$ deucalion status
+Backup drive 'Alex Backup'
+  Folder:        /media/alex/Alex Backup/Deucalion-Backup
+  Filesystem:    exfat   Encrypted: yes
+  Backed up:     1,048 files, 490.5 MB
+  Free space:    5.5 GB
+  _removed/:     95 B in 1 batch(es)
+  From machine:  alex-laptop (Ubuntu 24.04.5 LTS), user alex
+  Last full:     2026-10-12T09:10:17+01:00
+  Recent runs:
+    2026-10-12T09:10:17+01:00  full     completed                5 copied, 2.4 MB
+    2026-10-12T09:09:21+01:00  full     completed                1,046 copied, 488.1 MB

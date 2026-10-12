@@ -1,0 +1,20 @@
+$ deucalion setup-drive --help
+usage: deucalion setup-drive [-h] [--layout {encrypt-all,encrypt-part,encrypt-folder,plain,as-is}]
+                             [--method {veracrypt,luks}] [--size GB] [--name NAME]
+                             [--yes-erase DRIVE] [-y]
+                             [device]
+
+prepare a drive for backups (format, encrypt)
+
+positional arguments:
+  device                the drive, e.g. /dev/sdb (asked if not given)
+
+options:
+  -h, --help            show this help message and exit
+  --layout {encrypt-all,encrypt-part,encrypt-folder,plain,as-is}
+  --method {veracrypt,luks}
+                        encryption method
+  --size GB             size of the encrypted part or folder
+  --name NAME           a name for the backup drive
+  --yes-erase DRIVE     confirm erasing, e.g. --yes-erase sdb
+  -y, --yes             don't ask for other confirmations

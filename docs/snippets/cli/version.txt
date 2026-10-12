@@ -1,0 +1,2 @@
+$ deucalion --version
+Deucalion 0.2.0

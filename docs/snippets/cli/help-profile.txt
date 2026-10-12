@@ -1,0 +1,12 @@
+$ deucalion profile --help
+usage: deucalion profile [-h] [{list,add,remove}] [name] [paths ...]
+
+manage saved selections for partial backups
+
+positional arguments:
+  {list,add,remove}
+  name
+  paths
+
+options:
+  -h, --help         show this help message and exit

@@ -1,0 +1,5 @@
+$ deucalion removed empty 2026-10-12_091017
+This permanently deletes 1 batch(es), 95 B, from the drive:
+  2026-10-12_091017   3 files   95 B
+Delete them permanently? [y/N] y
+Freed 95 B.

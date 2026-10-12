@@ -1,0 +1,5 @@
+$ deucalion removed
+  2026-10-12_091017          3 files   95 B
+  2026-10-12_091020          1 files   39 B
+  2026-10-12_091041        403 files   333.8 MB
+  Total: 333.8 MB   (/media/alex/Alex Backup/Deucalion-Backup/_removed)

@@ -1,0 +1,2 @@
+$ deucalion profile add work ~/Projects ~/Documents/Work
+  work: /home/alex/Projects, /home/alex/Documents/Work

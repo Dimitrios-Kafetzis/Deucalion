@@ -1,0 +1,5 @@
+$ deucalion drives
+/dev/sda  Spare Drive  32.0 GB  (external, usb)
+    /dev/sda1 “Spare”  exfat  32.0 GB  not mounted
+/dev/sdb  Work Drive  32.0 GB  (external, usb)
+    /dev/sdb1 “Work”  ntfs  32.0 GB  /media/alex/Work  [Deucalion backup]

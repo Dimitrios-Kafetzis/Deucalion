@@ -1,0 +1,19 @@
+$ deucalion targets
+Backup  not connected
+    /media/alex/Backup/Deucalion-Backup
+    id 111d1235-ace1-4b0f-b011-8572686cf031
+Travel  not connected
+    /media/alex/Travel/Deucalion-Backup
+    id 0f207356-ba92-4a34-bc16-5074434aef81
+Big  not connected
+    /media/alex/Big/Deucalion-Backup
+    id 62cb6e7f-f233-495e-9295-48e9fc720235
+Photo Vault  not connected
+    /media/alex/Photo Vault/Deucalion-Backup
+    id 42e1e781-2604-4971-a74a-ce43a0fd31fb
+Spare  not connected
+    /media/alex/Spare/Deucalion-Backup
+    id 4b9cb1e2-76ba-4efb-94f8-906f62cf7d50
+Work (default)  connected
+    /media/alex/Work/Deucalion-Backup
+    id 10a6691e-214a-4428-8c03-3b855c2a6003

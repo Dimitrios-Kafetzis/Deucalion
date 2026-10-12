@@ -1,0 +1,4 @@
+$ deucalion ls
+home/  from /home/alex  (565 files, 156.5 MB)
+extras/shared/  from /srv/shared  (2 files, 293.0 KB)
+system/  from /home/alex/.local/state/deucalion/system  (81 files, 134.8 KB)

@@ -1,0 +1,2 @@
+$ deucalion verify
+Another Deucalion task is already using this drive.

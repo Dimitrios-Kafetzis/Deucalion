@@ -1,0 +1,39 @@
+$ cat "/media/alex/Alex Backup/Deucalion-Backup/backup.json"
+{
+  "tool": "Deucalion",
+  "tool_version": "0.2.0",
+  "format": 1,
+  "machine": {
+    "hostname": "alex-laptop",
+    "os": "Ubuntu 24.04.5 LTS",
+    "version_id": "24.04",
+    "kernel": "6.8.0-142-generic"
+  },
+  "user": {
+    "name": "alex",
+    "uid": 1000,
+    "home": "/home/alex"
+  },
+  "sources": [
+    {
+      "name": "home",
+      "origin": "/home/alex"
+    },
+    {
+      "name": "system",
+      "origin": "/home/alex/.local/state/deucalion/system"
+    }
+  ],
+  "last_run": {
+    "kind": "full",
+    "started": "2026-10-12T09:10:17+01:00",
+    "finished": "2026-10-12T09:10:17+01:00",
+    "status": "completed",
+    "copied_files": 5,
+    "copied_bytes": 2478520,
+    "removed_items": 1,
+    "warnings": 0,
+    "error": null
+  },
+  "last_full_backup": "2026-10-12T09:10:17+01:00"
+}

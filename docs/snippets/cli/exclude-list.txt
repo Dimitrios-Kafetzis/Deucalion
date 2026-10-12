@@ -1,0 +1,19 @@
+$ deucalion exclude
+  .cache/
+  .thumbnails/
+  .local/share/Trash/
+  .local/share/recently-used.xbel
+  .local/share/containers/
+  .var/app/*/cache/
+  .npm/_cacache/
+  .config/**/Cache/
+  .config/**/Code Cache/
+  .config/**/GPUCache/
+  .config/**/DawnCache/
+  .config/**/DawnGraphiteCache/
+  .config/**/DawnWebGPUCache/
+  .config/**/GrShaderCache/
+  .config/**/ShaderCache/
+  .config/**/CacheStorage/
+  .config/**/CachedData/
+  .config/**/CachedExtensionVSIXs/

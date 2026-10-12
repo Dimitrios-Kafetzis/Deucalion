@@ -1,0 +1,6 @@
+$ deucalion drives
+/dev/sda  USB Drive  8.0 GB  (external, usb)
+    /dev/sda1 “Alex Backup”  exfat  2.0 GB  /media/alex/Alex Backup1
+    /dev/mapper/deucalion-c1456ac47a07 “Alex Backup”  exfat  6.0 GB  /media/alex/Alex Backup  [encrypted, Deucalion backup]
+/dev/sdb  Spare Drive  32.0 GB  (external, usb)
+    no filesystems (empty or unformatted)

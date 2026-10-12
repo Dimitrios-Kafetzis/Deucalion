@@ -1,0 +1,9 @@
+$ deucalion backup --only ~/Documents ~/Pictures
+Backing up to Alex Backup  /media/alex/Alex Backup/Deucalion-Backup
+Backup plan (partial: /home/alex/Documents, /home/alex/Pictures)
+  New files:               0   0 B
+  Changed files:           1   72 B (previous versions go to _removed/)
+  Gone/excluded:           0   0 B (moved to _removed/)
+  Unchanged:              44   86.4 MB
+Backup finished in 0s: copied 1 file (72 B), moved 0 items to _removed/.
+Log: /media/alex/Alex Backup/Deucalion-Backup/.deucalion/logs/2026-10-12_091020-backup.log

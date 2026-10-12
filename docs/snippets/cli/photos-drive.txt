@@ -1,0 +1,2 @@
+$ ls /media/alex/Photos
+ Deucalion-Backup.hc   Deucalion-Tool  'Photos 2019'  'Photos 2020'   READ-ME-FIRST.txt   Scans

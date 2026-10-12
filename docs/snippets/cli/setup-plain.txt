@@ -1,0 +1,24 @@
+$ deucalion setup-drive
+Which drive?
+  1) /dev/sda  Spare Drive  32.0 GB
+  Choose [1-1] (default 1):
+
+/dev/sda  Spare Drive  32.0 GB
+  (empty)
+
+How should the backup be stored?
+  1) Encrypt the whole drive
+  2) Encrypted part for the backup + a normal part for other files
+  3) No encryption: erase and format the whole drive as exFAT
+  Choose [1-3] (default 1): 3
+  A name for this backup drive [Deucalion]: Spare
+
+Summary
+  Drive:  /dev/sda  Spare Drive  32.0 GB
+  Layout: No encryption: erase and format the whole drive as exFAT
+  EVERYTHING on /dev/sda will be erased.
+  To confirm, type the drive name (sda): sda
+  Erasing /dev/sda and creating a new partition table
+  Backup drive 'Spare' is ready: /media/alex/Spare/Deucalion-Backup
+
+Done. Back up with: deucalion backup  (drive 'Spare')

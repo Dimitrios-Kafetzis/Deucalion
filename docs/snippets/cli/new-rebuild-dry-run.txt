@@ -1,0 +1,57 @@
+$ bin/deucalion rebuild --dry-run
+Rebuild from backup 'Alex Backup'
+
+Step 1/8: Check the backup and this machine
+  Backup of alex@alex-laptop (Ubuntu 24.04.5 LTS), last backup 2026-10-12T09:12:51+01:00.
+  This machine: alexk@alex-new-laptop (Ubuntu 26.04.1 LTS).
+  Home folder in the backup: 577 files, 368.7 MB.
+  Your home folder moves from /home/alex to /home/alexk; paths inside settings files will be updated.
+
+Step 2/8: Software sources (apt repositories)
+  Ubuntu's own repositories are already set up by the installer and are not changed.
+  [x]   1  PPA git-core/ppa  — https://ppa.launchpadcontent.net/git-core/ppa/ubuntu/  resolute  — available
+  [x]   2  google-chrome  — https://dl.google.com/linux/chrome/deb/  stable  — available
+
+Step 3/8: Applications and packages
+  Hardware/kernel packages are left to the installer: linux-modules-extra-6.8.0-142-generic.
+  Installed by hand (reinstall them yourself if you need them): /usr/local/bin/hello-tool, /usr/local/libexec, /usr/local/share/ca-certificates, /usr/local/share/fonts, /usr/local/share/sgml, /usr/local/share/xml
+  [x]   1  python3-pyrsistent  — apt package
+  [x]   2  python3-tz  — apt package
+  [x]   3  tree  — apt package
+  [x]   4  hello-world  — snap, latest/stable
+  [x]   5  hello-tool  — from your downloaded file ~/Downloads/hello-tool_1.2.0_all.deb
+   -    6  veracrypt  — was installed from a downloaded .deb (version 1.26.29-1~ubuntu24.04-1); download it again from its website
+
+Step 4/8: Your home folder
+  Restores into /home/alexk. Files that would be overwritten are first moved to ~/Deucalion-before-restore/. Close other apps before you continue.
+  [x]   1  Files directly in your home folder  — 6 files, 4.8 KB
+  [x]   2  .config/  — 5 files, 2.1 KB
+  [x]   3  .local/  — 63 files, 875.1 KB
+  [x]   4  .ssh/  — 4 files, 305 B
+  [x]   5  Desktop/  — 11 files, 21.4 MB
+  [x]   6  Deucalion/  — 371 files, 5.8 MB
+  [x]   7  Documents/  — 12 files, 191.2 MB
+  [x]   8  Downloads/  — 1 files, 572 B
+  [x]   9  Music/  — 3 files, 63.4 MB
+  [x]  10  Pictures/  — 34 files, 86.0 MB
+  [x]  11  Projects/  — 67 files, 120.3 KB
+
+Step 5/8: Update paths in your settings (new home folder)
+  No settings files mention /home/alex.
+
+Step 6/8: Desktop settings (GNOME)
+  [x]   1  Load all desktop settings  — 2 groups: wallpaper, dock, keyboard shortcuts, app settings…
+
+Step 7/8: System settings (/etc)
+  55 more files are kept in the backup for reference only (system identity, disks, login, repositories and network are handled separately or by the installer).
+  [ ]   1  /etc/hosts  — added, differs from this machine
+  [ ]   2  /etc/nanorc  — modified (nano), differs from this machine
+  [x]   3  /etc/sysctl.d/99-swappiness.conf  — added, new file
+  [x]   4  /etc/udev/rules.d/99-usb-serial.rules  — added, new file
+
+Step 8/8: Groups, scheduled tasks, services and network connections
+  [x]   1  Add you to the 'dialout' group  — serial ports and USB debug probes
+  [x]   2  Your scheduled tasks (crontab)  — 1 lines
+  [x]   3  Network connection Home Wi-Fi  — Wi-Fi/VPN/wired
+
+Dry run: nothing was changed.

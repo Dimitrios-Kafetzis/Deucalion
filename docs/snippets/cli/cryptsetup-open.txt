@@ -1,0 +1,2 @@
+$ sudo cryptsetup open --type tcrypt --veracrypt /media/alex/Photos/Deucalion-Backup.hc mybackup
+Enter passphrase for /media/alex/Photos/Deucalion-Backup.hc:

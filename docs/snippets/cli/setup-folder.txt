@@ -1,0 +1,40 @@
+$ deucalion setup-drive
+Which drive?
+  1) /dev/sda  Photo Drive  32.0 GB
+  Choose [1-1] (default 1):
+
+/dev/sda  Photo Drive  32.0 GB
+  /dev/sda1  ntfs  32.0 GB, 75.2 MB used  “Photos”  at /media/alex/Photos
+
+How should the backup be stored?
+  1) Encrypt the whole drive
+  2) Encrypted part for the backup + a normal part for other files
+  3) Encrypted folder on this drive (keeps what is already on it)
+  4) No encryption: erase and format the whole drive as exFAT
+  5) No encryption: use the drive as it is (keeps what is already on it)
+  Choose [1-5] (default 1): 3
+
+Which encryption?
+  1) VeraCrypt: open it on Linux, macOS and Windows (with VeraCrypt)
+  2) LUKS: built into Ubuntu, no extra software, Linux only
+  Choose [1-2] (default 1): 1
+  Size of the encrypted folder? (it cannot grow later) [default 24 GB, max 30 GB]: 2
+  A name for this backup drive [Deucalion]: Photo Vault
+
+Summary
+  Drive:  /dev/sda  Photo Drive  32.0 GB
+  Layout: Encrypted folder on this drive (keeps what is already on it) (veracrypt)
+  Encrypted size: 2.0 GB
+  Continue? [y/N] y
+
+Choose the password for the backup. It cannot be recovered if you forget it: write it down and keep it somewhere safe.
+  Backup password:
+  Type it again:
+  Creating the VeraCrypt folder (you will be asked for your administrator password)…
+  Encrypting (VeraCrypt)…
+  Unlocking (VeraCrypt volumes can take up to a minute)…
+  Creating the exFAT filesystem inside
+  Unlocking (VeraCrypt volumes can take up to a minute)…
+  Backup drive 'Photo Vault' is ready: /media/alex/Photo Vault/Deucalion-Backup
+
+Done. Back up with: deucalion backup  (drive 'Photo Vault')

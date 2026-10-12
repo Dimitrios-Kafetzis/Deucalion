@@ -1,0 +1,6 @@
+$ ls "/media/alex/Alex Backup1" "/media/alex/Alex Backup1/Deucalion-Tool"
+'/media/alex/Alex Backup1':
+Deucalion-Tool	READ-ME-FIRST.txt
+
+'/media/alex/Alex Backup1/Deucalion-Tool':
+README.md  bin	deucalion  drive.json

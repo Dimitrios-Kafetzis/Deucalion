@@ -1,0 +1,11 @@
+$ cat "/media/alex/Alex Backup1/Deucalion-Tool/drive.json"
+{
+  "method": "veracrypt",
+  "kind": "partition",
+  "partuuid": "357b958c-3642-4038-828f-af744ee22801",
+  "mount_name": "Alex Backup",
+  "plain_uuid": "EFFC-B52F",
+  "version": "0.2.0",
+  "target_id": "f7721c0e-a587-44de-a199-2d74f9c20b4e",
+  "target_name": "Alex Backup"
+}

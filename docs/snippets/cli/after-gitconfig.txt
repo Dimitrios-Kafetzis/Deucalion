@@ -1,0 +1,6 @@
+$ cat ~/.gitconfig
+[user]
+	name = Alex
+	email = alex@example.com
+[core]
+	excludesfile = /home/alexk/.gitignore_global

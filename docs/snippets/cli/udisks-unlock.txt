@@ -1,0 +1,3 @@
+$ udisksctl unlock -b /dev/sda1
+Passphrase:
+Unlocked /dev/sda1 as /dev/dm-0.

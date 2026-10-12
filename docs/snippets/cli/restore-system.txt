@@ -1,0 +1,9 @@
+$ deucalion restore system/desktop --to ~/Desktop/recipe
+Restore plan
+  system/desktop  →  /home/alex/Desktop/recipe/desktop
+  New:                     2
+  Overwrite:               0   (current versions are moved aside first)
+  Already the same:        0
+  To copy:                 1   172 B
+Restore now? [y/N] y
+Restored 1 file (172 B).

@@ -1,0 +1,10 @@
+$ deucalion backup --target Small
+Backing up to Small  /media/alex/Small/Deucalion-Backup
+Note: this drive is not encrypted, and your backup includes keys or logged-in sessions (.ssh).
+Saving the system recipe (packages, settings, services) — you may be asked for your administrator password…
+Backup plan (full: everything)
+  New files:             660   369.1 MB
+  Changed files:           0   0 B (previous versions go to _removed/)
+  Gone/excluded:           0   0 B (moved to _removed/)
+  Unchanged:               0   0 B
+Not enough space on the drive: this backup needs about 389.8 MB but only 59.3 MB is free. You can free space by emptying _removed/ (deucalion removed empty) or excluding large folders.

@@ -1,0 +1,6 @@
+$ deucalion register "/media/alex/Alex Backup2/Deucalion-Backup" --default
+Registered backup drive 'Alex Backup'.
+  Backup folder: /media/alex/Alex Backup2/Deucalion-Backup
+  Filesystem:    exfat  (names stored exFAT-safe)
+  Encrypted:     yes
+  Free space:    5.3 GB

@@ -1,0 +1,2 @@
+$ deucalion backup
+The backup drive is not connected.

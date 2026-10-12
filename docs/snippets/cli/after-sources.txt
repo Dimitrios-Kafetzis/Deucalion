@@ -1,0 +1,2 @@
+$ ls /etc/apt/sources.list.d
+git-core-ubuntu-ppa-noble.sources  google-chrome.list  ubuntu.sources

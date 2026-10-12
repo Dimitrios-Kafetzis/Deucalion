@@ -1,0 +1,2 @@
+$ id -nG alexk
+alexk adm dialout sudo plugdev

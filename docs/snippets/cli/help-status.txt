@@ -1,0 +1,8 @@
+$ deucalion status --help
+usage: deucalion status [-h] [--target NAME]
+
+show the state of the backup
+
+options:
+  -h, --help     show this help message and exit
+  --target NAME  which registered drive to use

@@ -1,0 +1,41 @@
+$ ls -R "/media/alex/Alex Backup/Deucalion-Backup/system"
+/media/alex/Alex Backup/Deucalion-Backup/system:
+README.txt
+desktop
+etc
+info.json
+packages
+services
+software
+
+/media/alex/Alex Backup/Deucalion-Backup/system/desktop:
+dconf.ini
+
+/media/alex/Alex Backup/Deucalion-Backup/system/etc:
+changed.json
+collected-by.txt
+files
+
+/media/alex/Alex Backup/Deucalion-Backup/system/etc/files:
+etc
+
+/media/alex/Alex Backup/Deucalion-Backup/system/etc/files/etc:
+apparmor.d
+apt
+ca-certificates.conf
+cloud
+console-setup
+crypttab
+default
+ec2_version
+environment
+fstab
+group
+grub.d
+hostname
+hosts
+hosts.allow
+hosts.deny
+initramfs-tools
+iscsi
+locale.conf

@@ -1,0 +1,7 @@
+$ bin/deucalion rebuild --step paths --dry-run
+Rebuild from backup 'Alex Backup'
+
+Step 1/1: Update paths in your settings (new home folder)
+  No settings files mention /home/alex.
+
+Dry run: nothing was changed.

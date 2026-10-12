@@ -1,0 +1,6 @@
+$ bin/deucalion open
+Backup password:
+  Unlocking (you will be asked for your administrator password)…
+  Unlocking (VeraCrypt volumes can take up to a minute)…
+Registered backup drive 'Alex Backup' on this machine.
+Backup drive 'Alex Backup' is open: /media/alexk/Alex Backup/Deucalion-Backup
