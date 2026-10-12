@@ -4,7 +4,7 @@ site_url: https://dimitrios-kafetzis.github.io/Deucalion/
 repo_url: https://github.com/Dimitrios-Kafetzis/Deucalion
 repo_name: Dimitrios-Kafetzis/Deucalion
 edit_uri: edit/main/docs/
-copyright: Deucalion · documentation for version 0.2.0
+copyright: Copyright &copy; 2026 Dimitrios Kafetzis · Deucalion 0.2.1 · free software under the <a href="https://github.com/Dimitrios-Kafetzis/Deucalion/blob/main/LICENSE">GNU GPL v3 or later</a>
 docs_dir: docs
 strict: true
 validation:            # every link, and every #anchor, must point somewhere real

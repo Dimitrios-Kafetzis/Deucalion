@@ -63,6 +63,13 @@ The [plan for version 1](plan.md) records the decisions and their reasons.
 
 ## Contributing
 
-Run the [tests](testing.md) before and after a change. If you change how the app looks or what a
-command prints, make the [screenshots and outputs](documentation.md) again. Report problems on
-[GitHub](https://github.com/Dimitrios-Kafetzis/Deucalion/issues).
+Read [CONTRIBUTING.md](https://github.com/Dimitrios-Kafetzis/Deucalion/blob/main/CONTRIBUTING.md)
+first. Run the [tests](testing.md) before and after a change. If you change how the app looks or what
+a command prints, make the [screenshots and outputs](documentation.md) again. Report problems on
+[GitHub](https://github.com/Dimitrios-Kafetzis/Deucalion/issues), ask questions in
+[Discussions](https://github.com/Dimitrios-Kafetzis/Deucalion/discussions), and report security
+problems privately (see
+[SECURITY.md](https://github.com/Dimitrios-Kafetzis/Deucalion/blob/main/SECURITY.md)).
+
+Deucalion is licensed under the
+[GNU General Public License, version 3 or later](https://github.com/Dimitrios-Kafetzis/Deucalion/blob/main/LICENSE).

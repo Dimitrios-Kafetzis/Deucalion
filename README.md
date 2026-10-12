@@ -1,216 +1,210 @@
+<div align="center">
+
+<img src="data/icons/hicolor/scalable/apps/io.github.DimitriosKafetzis.Deucalion.svg" width="112" alt="Deucalion icon">
+
 # Deucalion
 
-Back up your Ubuntu machine to an external drive, and rebuild it later: on a new
-Ubuntu LTS or on a new machine, even with a different username.
+**Back up your Ubuntu computer to an external drive, and rebuild it later:
+on a new computer or a new Ubuntu release, step by step.**
 
-- **Plain files on the drive.** The backup is normal folders and files you can open on
-  Linux, macOS and Windows, with no special tool needed.
-- **Nothing is lost silently.** Files that changed or were deleted on your machine are
-  moved to `_removed/` on the drive, never deleted. Only you empty it.
-- **Exact restores.** Permissions, symlinks and file names that exFAT can't store are kept
-  in a manifest on the drive and put back when you restore.
-- **Safe by default.** Every restore shows a preview first, and anything it would overwrite
-  is kept in `~/Deucalion-before-restore/`.
-- **Rebuild a machine.** A full backup also saves a *system recipe* (packages, repositories,
-  snaps, desktop settings, services, groups, changed `/etc` files, Wi-Fi/VPN connections).
-  `deucalion rebuild` replays it on a new machine or a newer Ubuntu, step by step, with a
-  preview at every step.
+[![Tests](https://github.com/Dimitrios-Kafetzis/Deucalion/actions/workflows/tests.yml/badge.svg)](https://github.com/Dimitrios-Kafetzis/Deucalion/actions/workflows/tests.yml)
+[![Documentation](https://github.com/Dimitrios-Kafetzis/Deucalion/actions/workflows/docs.yml/badge.svg)](https://dimitrios-kafetzis.github.io/Deucalion/)
+[![Latest release](https://img.shields.io/github/v/release/Dimitrios-Kafetzis/Deucalion?label=release)](https://github.com/Dimitrios-Kafetzis/Deucalion/releases/latest)
+[![License: GPL v3+](https://img.shields.io/badge/license-GPL--3.0--or--later-blue)](LICENSE)
+[![Ubuntu 24.04+](https://img.shields.io/badge/Ubuntu-24.04%2B-E95420?logo=ubuntu&logoColor=white)](https://dimitrios-kafetzis.github.io/Deucalion/troubleshooting/faq/#which-ubuntu-versions-does-it-work-on)
+[![Python 3.10+](https://img.shields.io/badge/python-3.10%2B-3776AB?logo=python&logoColor=white)](https://www.python.org)
 
-- **Optional encryption.** Encrypt the whole drive, an encrypted part of it, or an encrypted
-  folder on it: VeraCrypt (opens on Linux, macOS and Windows) or LUKS (Linux only).
+[**Documentation**](https://dimitrios-kafetzis.github.io/Deucalion/) ·
+[Install](https://dimitrios-kafetzis.github.io/Deucalion/getting-started/install/) ·
+[Tutorials](https://dimitrios-kafetzis.github.io/Deucalion/tutorials/) ·
+[Changelog](CHANGELOG.md) ·
+[Discussions](https://github.com/Dimitrios-Kafetzis/Deucalion/discussions)
 
-> **Status:** version 0.2: backup, restore, rebuild, drive setup and encryption, as a GNOME app and
-> from the command line, after an extensive safety campaign (see *How Deucalion protects your data*).
+</div>
 
-## Documentation
+<p align="center">
+  <picture>
+    <source media="(prefers-color-scheme: dark)" srcset="docs/assets/screenshots/dark/overview-dark.png">
+    <img src="docs/assets/screenshots/app/overview-ready.png" width="760"
+         alt="The Deucalion app: the Overview page with the backup drive ready, a Back Up Now button, the last backup, and how much is in the backup.">
+  </picture>
+</p>
 
-The full documentation, with step-by-step tutorials for the app and the command line, is at
-**https://dimitrios-kafetzis.github.io/Deucalion/** (its source is in [`docs/`](docs/)).
-To read it locally:
+## Why Deucalion?
 
-```bash
-python3 -m venv ~/.venvs/deucalion-docs
-~/.venvs/deucalion-docs/bin/pip install -r docs/requirements.txt
-~/.venvs/deucalion-docs/bin/mkdocs serve      # then open http://127.0.0.1:8000
-```
+Reinstalling Ubuntu, or moving to a new laptop, usually means a weekend of putting things back:
+files, apps, software sources, desktop settings, Wi-Fi passwords, the changes you once made in `/etc`.
+Most backup tools give you back your files. Deucalion also gives you back **the setup**.
+
+It mirrors your home folder to an external drive as **plain files** you can open anywhere. It saves a
+readable **system recipe** of how your computer was set up. Then it **rebuilds** a fresh Ubuntu from
+both, one step at a time, showing what will change before anything does.
+
+It is made for people who are not system administrators. Everything works in a GNOME app with
+buttons, and everything also works from the terminal.
+
+## Features
+
+| | |
+|---|---|
+| 📂 **Plain files on the drive** | The backup is ordinary folders and files. Open it on Linux, Windows or macOS, with no special tool. |
+| 🛡️ **Nothing is lost silently** | Files that changed or were deleted move to *Removed Files* on the drive, never deleted. Only you empty it. |
+| 🎯 **Exact restores** | Permissions, owners, links and names that exFAT can't store are kept in a manifest and put back on restore. |
+| 👀 **Preview first, always** | Every backup, restore and rebuild step shows its plan. Anything a restore replaces is kept in `~/Deucalion-before-restore/`. |
+| 🔁 **Rebuild a computer** | Software sources, apt packages, snaps and downloaded `.deb` files, your home folder, desktop settings, `/etc` changes, groups, scheduled tasks, services and network connections. Works across Ubuntu releases, even with a different user name. |
+| 🔒 **Optional encryption** | Encrypt the whole drive, part of it, or a folder on it: VeraCrypt (opens on Linux, macOS and Windows) or LUKS. |
+| ⚡ **Fast and frugal** | Only changes are copied. Millions of files with little memory. Interrupt at any time: the next run carries on. |
+| 🧰 **App and command line** | A GTK 4 / libadwaita app that follows your light or dark theme, and a `deucalion` command for terminals, scripts and SSH. |
+
+## Screenshots
+
+<table>
+  <tr>
+    <td width="50%"><img src="docs/assets/screenshots/app/backup-review.png" alt="Back Up: the plan before copying, with new, changed and removed files and the largest folders."></td>
+    <td width="50%"><img src="docs/assets/screenshots/app/restore-preview.png" alt="Restore: a confirmation listing the files to restore and the one that will be replaced and kept."></td>
+  </tr>
+  <tr>
+    <td align="center"><b>See the plan before every backup</b></td>
+    <td align="center"><b>Restore with a preview</b></td>
+  </tr>
+  <tr>
+    <td><img src="docs/assets/screenshots/rebuild/rebuild-packages-chosen.png" alt="Rebuild, step 3 of 8: the apps and packages to install, with checkboxes."></td>
+    <td><img src="docs/assets/screenshots/app/wizard-storage-split.png" alt="Drive setup: choosing between whole-drive encryption, an encrypted part, an encrypted folder, plain exFAT, or the drive as it is."></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Rebuild step by step</b></td>
+    <td align="center"><b>Set up and encrypt a drive</b></td>
+  </tr>
+</table>
 
 ## Install
 
+**Requirements:** Ubuntu 24.04 or newer for the app. The command line also works on Ubuntu 22.04.
+Python 3.10 or newer (Ubuntu's own).
+
 ```bash
+sudo apt install git
 git clone https://github.com/Dimitrios-Kafetzis/Deucalion.git
 cd Deucalion
-./install.sh                    # checks/installs what is needed (asks before installing), then
-                                # adds the app menu entry and the 'deucalion' command
-./install.sh --system-helper    # recommended: also installs the administrator helper system-wide
+./install.sh                    # checks what is needed and installs it (asks first),
+                                # then adds Deucalion to the app menu and the 'deucalion' command
+./install.sh --system-helper    # recommended: also install the administrator helper system-wide
 ```
 
-`--system-helper` asks for your password once. It puts a root-owned copy of the small
-administrator helper in `/usr/local/libexec/deucalion/`, so code that runs as root can't be
-changed by other programs. It also adds a clear password prompt ("Deucalion needs administrator
-access…") that is remembered for a few minutes. `./install.sh --uninstall` removes everything
-except your backups and settings.
+The installer checks for the GTK and libadwaita libraries, UDisks, cryptsetup, `exfatprogs`, dconf
+and gnupg, and offers to install what is missing. It can also install
+[VeraCrypt](https://www.veracrypt.fr), needed only for VeraCrypt drives, after checking the package's
+signature against VeraCrypt's key. `./install.sh --uninstall` removes Deucalion and keeps your backups
+and settings.
 
-You can also run Deucalion without installing it: `bin/deucalion` (from a clone, or from the
-`Deucalion-Tool` folder on a backup drive).
+No installation needed to try it: run `bin/deucalion` from the clone. Every backup drive that
+Deucalion prepares also carries a copy of it, in a `Deucalion-Tool` folder.
 
-### Requirements
-
-Ubuntu 22.04 or newer (Python 3.10+). `./install.sh` (or `deucalion deps --install`) checks
-everything and installs what is missing: the GTK/libadwaita libraries, UDisks, cryptsetup,
-`exfatprogs`, dconf and gnupg. It can also install VeraCrypt (needed only for
-VeraCrypt-encrypted drives), downloading the official package and checking its signature first.
+➡️ Step by step, with screenshots: [Install Deucalion](https://dimitrios-kafetzis.github.io/Deucalion/getting-started/install/).
 
 ## Quick start
 
-Run `bin/deucalion` with no arguments to open the app (GTK4/libadwaita, follows your light/dark
-theme): Overview, Back Up, Restore, Rebuild, Drives, Removed Files and Settings. Everything below
-can also be done from the command line:
+**In the app:** open **Deucalion** from the app menu, go to **Drives** → **Set Up a Drive…**, choose
+how to store the backup, then click **Back Up Now** on the Overview page.
+
+**In a terminal:**
 
 ```bash
-# from this folder (or from the Deucalion-Tool folder on your backup drive)
-bin/deucalion drives                               # see your connected drives
-bin/deucalion setup-drive                          # prepare a drive: format and/or encrypt it
-#   …or use a drive as it is:  bin/deucalion register /media/$USER/MyDrive
-bin/deucalion backup --dry-run                     # see what would be copied (largest folders too)
-bin/deucalion backup                               # back up
-bin/deucalion status
+deucalion setup-drive           # prepare a drive: format and/or encrypt it
+                                # (or use a drive as it is: deucalion register /media/$USER/MyDrive)
+deucalion backup --dry-run      # see what would be copied, and the largest folders
+deucalion backup                # back up
+deucalion restore ~/Documents/report.pdf
+deucalion status
 ```
 
-### Common tasks
+Press <kbd>Ctrl</kbd>+<kbd>C</kbd> once to stop safely; the next backup continues where it stopped.
+See [Your first backup](https://dimitrios-kafetzis.github.io/Deucalion/getting-started/first-backup/)
+and the [command reference](https://dimitrios-kafetzis.github.io/Deucalion/cli/).
 
-| Task | Command |
-|---|---|
-| Back up only some folders | `deucalion backup --only ~/Documents ~/Pictures` |
-| Save a selection for later | `deucalion profile add work ~/Projects ~/Documents/Work` then `deucalion backup --profile work` |
-| Leave something out | `deucalion exclude add "Videos/" "*.iso"` |
-| Also back up a folder outside home | `deucalion folder add /srv/data` |
-| See what's in the backup | `deucalion ls ~/Documents` |
-| Restore a file or folder | `deucalion restore ~/Documents/report.pdf` |
-| Restore somewhere else | `deucalion restore ~/Documents --to ~/Desktop/recovered` |
-| Rebuild a new machine | `deucalion rebuild` (`--dry-run` to only look, `--step packages` to redo one step) |
-| Back up without the admin password | `deucalion backup --no-admin` (network connections and root-only `/etc` files are then skipped) |
-| Unlock / lock an encrypted drive | `deucalion open` / `deucalion close` (other commands ask for the password when needed) |
-| Check the backup is intact | `deucalion verify` (sizes) or `deucalion verify --full` (checksums) |
-| See / free space in `_removed/` | `deucalion removed` / `deucalion removed empty` |
+## Rebuilding a computer
 
-Press Ctrl+C once to stop safely; the next backup continues where it stopped.
+On a freshly installed Ubuntu, with any user name:
 
-### Exclusion patterns
+1. Plug in the backup drive and open its `Deucalion-Tool` folder in a terminal.
+2. `bin/deucalion open` to unlock the backup (or `register` an unencrypted drive).
+3. `bin/deucalion` and go to **Rebuild**, or run `bin/deucalion rebuild` in the terminal.
 
-Patterns are relative to your home folder:
+The rebuild runs eight steps: check the backup, software sources, apps and packages, your home
+folder, paths in your settings (if your user name changed), desktop settings, `/etc` files (each one
+shown as a diff), and groups, scheduled tasks, services and network connections. Each step shows its
+plan first and can be skipped. It never removes packages and never changes Ubuntu's own sources. You
+can stop and continue later, and running it twice changes nothing.
 
-- `node_modules/`: a folder with that name, anywhere
-- `*.iso`: files matching the pattern, anywhere
-- `.local/share/Trash/`: that exact path
-- `.config/**/Cache/`: `**` matches any number of folders
-
-Caches, the Trash and browser caches are excluded by default (`deucalion exclude list`).
+➡️ The full walk-through: [Rebuild your computer](https://dimitrios-kafetzis.github.io/Deucalion/tutorials/rebuild/).
 
 ## What is on the drive
 
-```
+```text
 Deucalion-Backup/
-├── backup.json          which machine/user this is, last run, results
+├── backup.json          which computer and user this is, the last run, the results
 ├── home/                your home folder, as normal files
-├── system/              the system recipe (readable text files, see system/README.txt)
-├── extras/              extra folders you added
-├── _removed/<date>/     old versions and deleted files, until you empty it
-└── .deucalion/          manifest (permissions, original names, checksums) and logs
+├── system/              the system recipe (readable text files)
+├── extras/              folders outside your home folder that you added
+├── _removed/<date>/     old versions and deleted files, until you empty them
+└── .deucalion/          the manifest (permissions, original names, checksums) and logs
 ```
 
-On exFAT, a name that isn't allowed there is stored with a look-alike character
-(`report: v2?.txt` → `report： v2？.txt`). Names that differ only in case get a counter
-(`Notes.txt` / `notes (2).txt`). Restoring always uses the original names.
+## How your data is protected
 
-## Rebuilding a machine
+- **A backup only reads your computer, and never deletes anything on the drive.** Tests compare every
+  file before and after, and check that every version ever backed up is still there.
+- **A restore never loses a local file.** Anything it replaces is moved aside first, never copied and
+  deleted, and put back if the restore fails.
+- **Interruptions are safe.** Kill it, unplug the drive or fill it up at any moment: the next run
+  repairs the backup.
+- **Administrator work is narrow.** One small helper with a fixed list of checked operations. It
+  refuses to touch the system disk.
 
-On the new machine (fresh Ubuntu install, any username):
+Tested with unit and integration tests on plain folders, exFAT and LUKS. Also with a randomized
+torture test that kills backups and restores at random moments, administrator and VeraCrypt checks,
+full rebuilds of fresh Ubuntu 26.04 virtual machines from 24.04 backups, and a real-data backup of
+about 700,000 files. Details:
+[How Deucalion protects your data](https://dimitrios-kafetzis.github.io/Deucalion/concepts/safety/).
 
-1. Plug in the backup drive and open a terminal in its `Deucalion-Tool` folder (or clone this repo).
-2. Encrypted drive: `bin/deucalion open` (finds and registers the backup).
-   Unencrypted drive: `bin/deucalion register /media/$USER/<drive>`.
-3. `bin/deucalion rebuild`.
+## Documentation
 
-The steps are:
+The documentation is written for everyone, not just developers. Every tutorial shows the app first,
+then the command line, with real screenshots and real output.
 
-1. **Check** the backup against this machine.
-2. **Repositories**: each one is checked for the new Ubuntu version.
-3. **Packages**: apt, snaps, and `.deb` files found in your Downloads.
-4. **Home folder**: choose which folders to restore.
-5. **Paths**: if your username changed, paths in settings files are updated.
-6. **Desktop settings**.
-7. **`/etc` files**: each one shown as a diff before you accept it.
-8. **Groups, crontabs, services and network connections**.
+| | |
+|---|---|
+| [Getting started](https://dimitrios-kafetzis.github.io/Deucalion/getting-started/) | Install Deucalion and make your first backup. |
+| [Choosing a drive](https://dimitrios-kafetzis.github.io/Deucalion/choosing-a-drive/) | The five drive layouts, with or without encryption. |
+| [Tutorials](https://dimitrios-kafetzis.github.io/Deucalion/tutorials/) | Every task, step by step: backups, restores, rebuilds, encrypted drives, and opening a backup without Deucalion. |
+| [The app](https://dimitrios-kafetzis.github.io/Deucalion/app/) and [the command line](https://dimitrios-kafetzis.github.io/Deucalion/cli/) | Every page and every command. |
+| [Troubleshooting](https://dimitrios-kafetzis.github.io/Deucalion/troubleshooting/) | Messages you might see, and what to do. |
+| [For developers](https://dimitrios-kafetzis.github.io/Deucalion/developers/) | Architecture, tests, and how the documentation is made. |
 
-Every step can be skipped, and `deucalion rebuild` continues where you stopped.
+## Project status
 
-## Drive layouts
+Deucalion is at version 0.2. Backups, restores, rebuilds, drive setup and encryption work, in the app
+and on the command line. Not there yet: scheduled backups (it runs when you start it) and a history of
+snapshots (it keeps one up-to-date copy plus *Removed Files*). See the
+[plan](https://dimitrios-kafetzis.github.io/Deucalion/developers/plan/) and the [changelog](CHANGELOG.md).
 
-`deucalion setup-drive` offers:
+## Contributing
 
-| Layout | Erases the drive? | Readable on |
-|---|---|---|
-| Encrypt the whole drive | yes | VeraCrypt: Linux/macOS/Windows with VeraCrypt · LUKS: Linux |
-| Encrypted part + normal exFAT part | yes | encrypted part as above; normal part everywhere |
-| Encrypted folder (container file) on the drive | no | as above |
-| exFAT, no encryption | yes | everywhere |
-| Use the drive as it is (e.g. NTFS) | no | depends on the filesystem |
+Bug reports, ideas, documentation fixes and code are all welcome. Please read
+[CONTRIBUTING.md](CONTRIBUTING.md) first. Questions go to
+[Discussions](https://github.com/Dimitrios-Kafetzis/Deucalion/discussions), and everyone taking part
+follows the [Code of Conduct](CODE_OF_CONDUCT.md).
 
-Plain exFAT and LUKS drives are prepared through Ubuntu's disk service, with no
-administrator password. Creating or opening a VeraCrypt volume needs
-[VeraCrypt](https://www.veracrypt.fr/en/Downloads.html) and the administrator password.
-Each prepared drive gets a `READ-ME-FIRST.txt` and a copy of Deucalion on its
-unencrypted part.
+Found a security problem? Please report it privately, as described in [SECURITY.md](SECURITY.md).
 
-## How Deucalion protects your data
+## License
 
-- **Backups only read your computer.** Tests compare every file's contents, permissions and
-  change time before and after each backup.
-- **Nothing on the drive is deleted by a backup.** Changed and deleted files go to `_removed/`,
-  and a test checks that every version ever backed up is still on the drive afterwards.
-- **Restores never lose a local file.** Anything replaced is renamed into
-  `~/Deucalion-before-restore/` (never copied-then-deleted). If a restore fails or is stopped,
-  the original is put back. Mount points are never touched.
-- **Rebuilds keep what they replace.**
-  - Desktop settings, crontabs and `/etc` files are saved first.
-  - Packages are never removed (`apt --no-remove`).
-  - Your system's own apt sources are never changed.
-  - Paths are updated only as whole paths.
-  - Running a rebuild twice changes nothing.
-- **Interruptions are safe.** You can kill the process, unplug the drive or let it run full
-  at any moment: the next run repairs the backup, with no duplicates or damage.
-- **Administrator work is narrow.**
-  - It goes through one small helper with a fixed list of checked operations, which refuses to
-    touch the system disk.
-  - The installed copy must match the app's own copy exactly.
-  - VeraCrypt is installed only after its signature is checked against VeraCrypt's pinned key.
-- **Edits that keep the same size and time are still caught.** The change time is checked, and
-  the contents are compared when in doubt.
+Deucalion is free software: you can redistribute it and/or modify it under the terms of the
+[GNU General Public License](LICENSE), version 3 or (at your option) any later version.
 
-### How this was tested
+Copyright © 2026 Dimitrios Kafetzis.
 
-- **Unit and integration tests** (`tests/`): on plain folders, real exFAT and LUKS volumes,
-  including regression tests for every issue found in three independent code reviews.
-- **A randomized torture test** (`tests/torture.py`): random trees with awkward names, and
-  backups and restores killed at random moments. Hundreds of runs passed on plain, exFAT and
-  LUKS drives.
-- **Administrator checks** (`tests/manual/admin_checks.py`, `veracrypt_checks.py`):
-  - protected-settings backups, with `/etc` fingerprinted before and after;
-  - a symlink attack on the root helper, and refused malicious requests;
-  - VeraCrypt create, open, wrong password and close in all three layouts.
-- **A full rebuild of a fresh Ubuntu 26.04 virtual machine** from a 24.04 backup, under a
-  different username, run twice (`tests/manual/vm_rebuild_check.py`).
-- **A real-data backup** of about 700,000 files (49 GB): verified, restored and compared
-  byte for byte.
+---
 
-## Development
-
-See [For developers](docs/developers/index.md) and the [plan for version 1](docs/developers/plan.md).
-
-```bash
-python3 -m unittest discover -s tests            # unit + integration tests
-# also run the suite on a real exFAT volume:
-DEUCALION_TEST_EXFAT=/media/$USER/TEST python3 -m unittest discover -s tests
-# and the LUKS drive-setup test on a disk image (needs a desktop session):
-DEUCALION_TEST_UDISKS=1 python3 -m unittest discover -s tests
-```
+<sub>In Greek myth, Deucalion survived the great flood in an ark he had built, then started the world
+again. This tool is meant to be that ark for your computer.</sub>

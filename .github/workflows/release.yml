@@ -1,0 +1,49 @@
+# Publishes a GitHub release when a version tag (v1.2.3) is pushed, with that version's notes
+# from CHANGELOG.md. The tag must match deucalion/__init__.py's __version__.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - name: Check the version
+        run: |
+          version="${GITHUB_REF_NAME#v}"
+          code="$(python3 -c 'import deucalion; print(deucalion.__version__)')"
+          if [[ "$version" != "$code" ]]; then
+            echo "::error::Tag $GITHUB_REF_NAME doesn't match __version__ $code"; exit 1
+          fi
+          echo "VERSION=$version" >> "$GITHUB_ENV"
+      - name: Take the notes from CHANGELOG.md
+        run: |
+          awk -v v="$VERSION" '
+            $0 ~ "^## \\[" v "\\]" { found = 1; next }
+            found && /^## \[/ { exit }
+            found && /^\[[^]]+\]: / { exit }
+            found { print }
+          ' CHANGELOG.md > "$RUNNER_TEMP/notes.md"
+          if ! grep -q '[^[:space:]]' "$RUNNER_TEMP/notes.md"; then
+            echo "::error::CHANGELOG.md has no section for $VERSION"; exit 1
+          fi
+          cat >> "$RUNNER_TEMP/notes.md" <<EOF
+
+          ---
+
+          **Install or update:** see [Install Deucalion](https://dimitrios-kafetzis.github.io/Deucalion/getting-started/install/).
+
+          **Documentation:** https://dimitrios-kafetzis.github.io/Deucalion/
+          EOF
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" --verify-tag --title "Deucalion $VERSION" \
+            --notes-file "$RUNNER_TEMP/notes.md"

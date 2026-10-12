@@ -9,6 +9,10 @@ python3 -m unittest discover -s tests
 They run on plain folders in a temporary directory (a fake home folder and a fake drive), so they need
 no drive and no administrator rights. Tests that need GTK skip themselves where it isn't installed.
 
+For every push and pull request, GitHub Actions runs them on Ubuntu 22.04 and 24.04, and once more on
+a real exFAT volume (a disk image), with Ubuntu's own Python and PyGObject. The workflow is
+`.github/workflows/tests.yml`.
+
 Two optional variants:
 
 ```bash
