@@ -83,4 +83,10 @@ The tools in `docs/tools/`:
 
 ## Publishing
 
-The site is published with GitHub Pages.
+The site is published with GitHub Pages, at <https://dimitrios-kafetzis.github.io/Deucalion/>. The
+workflow `.github/workflows/docs.yml` runs `mkdocs build --strict` and deploys the result on every
+push to `main` that changes `docs/`, `mkdocs.yml` or the workflow itself. To publish by hand, run it
+from the repository's **Actions** tab (**Documentation** → **Run workflow**).
+
+A build with warnings fails, and the published site stays as it was. Run `mkdocs build --strict`
+locally before pushing.
