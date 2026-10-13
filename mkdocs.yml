@@ -89,6 +89,8 @@ markdown_extensions:
         - name: mermaid
           class: mermaid
           format: !!python/name:pymdownx.superfences.fence_code_format
+  - pymdownx.tasklist:
+      custom_checkbox: true
   - pymdownx.tabbed:
       alternate_style: true
   - pymdownx.emoji:
@@ -187,4 +189,6 @@ nav:
       - Tests: developers/testing.md
       - Documentation and screenshots: developers/documentation.md
       - Plan for version 1: developers/plan.md
+      - Roadmap: developers/roadmap.md
+      - "Portability: technical reference": developers/portability.md
   - Changelog: changelog.md

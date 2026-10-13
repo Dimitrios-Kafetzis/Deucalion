@@ -76,4 +76,5 @@ flowchart LR
     Deucalion runs only when you start it: there are no scheduled or automatic backups yet. It keeps
     one up-to-date copy of your files (plus the old versions in Removed Files), not a history of
     daily snapshots. It does not copy Docker images or virtual machine disks; it only lists them.
-    See the [plan](developers/plan.md) for what is planned next.
+    See the [roadmap](developers/roadmap.md) for what is planned next: other Linux distributions,
+    automatic backups, macOS and Windows.

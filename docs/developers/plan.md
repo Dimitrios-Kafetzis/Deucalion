@@ -287,5 +287,6 @@ Version 0.2. Everything in this plan is built, and the safety campaign is done:
       data needed more than 80 GB, which led to the 8 KB setting and the cluster-aware space check.)
 - [x] `install.sh` checks and installs dependencies, including a signature-verified VeraCrypt.
 
-Planned next (from §12): snapshot history, automatic/scheduled backups, full-disk image,
-Docker/VM exports.
+Planned next: see the [roadmap](roadmap.md). Other Linux distributions come in 0.3 and 0.4, automatic
+backups and Docker/VM export in 0.5, macOS in 0.6 and 0.7, and Windows in 0.8 and 0.9. Snapshot history
+and the full-disk image come after 1.0.

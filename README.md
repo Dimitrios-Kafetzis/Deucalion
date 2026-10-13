@@ -183,10 +183,28 @@ then the command line, with real screenshots and real output.
 
 ## Project status
 
-Deucalion is at version 0.2. Backups, restores, rebuilds, drive setup and encryption work, in the app
-and on the command line. Not there yet: scheduled backups (it runs when you start it) and a history of
-snapshots (it keeps one up-to-date copy plus *Removed Files*). See the
-[plan](https://dimitrios-kafetzis.github.io/Deucalion/developers/plan/) and the [changelog](CHANGELOG.md).
+Deucalion is at version 0.2.1. Backups, restores, rebuilds, drive setup and encryption work on Ubuntu,
+in the app and on the command line. Not there yet: other Linux distributions, macOS and Windows,
+automatic backups (it runs when you start it), and a history of snapshots (it keeps one up-to-date copy
+plus *Removed Files*). See the [roadmap](#roadmap) and the [changelog](CHANGELOG.md).
+
+## Roadmap
+
+| Version | What it will bring |
+|---|---|
+| **0.3** | Debian, Linux Mint, Fedora, openSUSE and Arch. Rebuild between distributions: your files, desktop settings, Flatpak apps, network connections, scheduled tasks and groups. |
+| **0.4** | The full rebuild on Fedora, openSUSE and Arch: software sources, packages and `/etc` changes. |
+| **0.5** | Automatic backups (when the drive is plugged in, or on a schedule), and Docker and virtual machines saved properly. |
+| **0.6** | macOS, from the terminal (preview): back up, browse, restore and verify. |
+| **0.7** | macOS rebuild (preview): your Homebrew apps installed again on a fresh Mac. |
+| **0.8** | Windows: browse, restore and verify a backup. |
+| **0.9** | Windows: back up. |
+| **1.0** | A stable drive format and a safety campaign on every platform. |
+| Later | Snapshot history, full-disk image, apps for macOS and Windows. |
+
+Versions further away may change. Every step, its tests and its progress are in the
+[roadmap](https://dimitrios-kafetzis.github.io/Deucalion/developers/roadmap/); the technical
+background is in [Portability](https://dimitrios-kafetzis.github.io/Deucalion/developers/portability/).
 
 ## Contributing
 

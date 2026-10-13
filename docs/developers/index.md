@@ -59,7 +59,10 @@ flowchart TB
 - A backup only reads the computer, and never deletes anything on the drive.
 - Administrator work is narrow and goes through one audited helper.
 
-The [plan for version 1](plan.md) records the decisions and their reasons.
+The [plan for version 1](plan.md) records the decisions and their reasons. The [roadmap](roadmap.md)
+plans every version from 0.3 to 1.0, step by step, and tracks progress. Its technical background
+(which code is portable, how macOS and Windows differ, and the test machines) is in
+[Portability](portability.md).
 
 ## Contributing
 

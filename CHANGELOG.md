@@ -4,6 +4,16 @@ All notable changes to Deucalion are listed here. The format follows
 [Keep a Changelog](https://keepachangelog.com/en/1.1.0/), and versions follow
 [Semantic Versioning](https://semver.org/).
 
+## [Unreleased]
+
+### Added
+
+- A [roadmap](https://dimitrios-kafetzis.github.io/Deucalion/developers/roadmap/) for versions 0.3 to
+  1.0: other Linux distributions, automatic backups, Docker and virtual machines, macOS and Windows,
+  with every step, its tests and its progress. Its technical background is in
+  [Portability](https://dimitrios-kafetzis.github.io/Deucalion/developers/portability/). The README has
+  a short version.
+
 ## [0.2.1] - 2026-10-12
 
 Found while following the new documentation step by step on Ubuntu 24.04 and 26.04.
@@ -107,6 +117,7 @@ The first version, built in five milestones and a safety campaign.
   torture test; manual administrator and VeraCrypt checks; a full rebuild of a fresh Ubuntu 26.04
   VM from a 24.04 backup.
 
+[Unreleased]: https://github.com/Dimitrios-Kafetzis/Deucalion/compare/v0.2.1...HEAD
 [0.2.1]: https://github.com/Dimitrios-Kafetzis/Deucalion/compare/v0.2.0...v0.2.1
 [0.2.0]: https://github.com/Dimitrios-Kafetzis/Deucalion/compare/v0.1.0...v0.2.0
 [0.1.0]: https://github.com/Dimitrios-Kafetzis/Deucalion/releases/tag/v0.1.0
